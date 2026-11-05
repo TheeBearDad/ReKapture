@@ -63,6 +63,12 @@ scripts/build-release.sh builds everything a release needs in one go:
 It writes dist/2.5.0/ReKapture-Setup-2.5.0.exe, ReKapture-Portable-2.5.0.zip
 and SHA256SUMS.txt. Publish them as a GitHub release tagged v2.5.0:
 
+    git tag v2.5.0 && git push origin v2.5.0
+
+GitHub then builds and publishes the release by itself (see
+.github/workflows/release.yml). Put the release notes in notes/v2.5.0.md first.
+To publish by hand instead:
+
     gh release create v2.5.0 dist/2.5.0/* --title "ReKapture 2.5.0" --notes "..."
 
 Installed copies check that repository's latest release and update

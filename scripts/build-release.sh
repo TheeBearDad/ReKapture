@@ -39,7 +39,7 @@ sed 's/$/\r/' README.txt > "$APP/README.txt"
 cp "$FFMPEG_DIR/bin/ffmpeg.exe" "$FFMPEG_DIR/LICENSE.txt" "$APP/ffmpeg/"
 
 echo "== installer"
-(cd installer && makensis -V2 -WX -DVERSION="$VERSION" -DSRC="../$APP" -DOUTFILE="../$OUT/ReKapture-Setup-$VERSION.exe" ReKapture.nsi)
+(cd installer && makensis ${MAKENSIS_FLAGS:--V2 -WX} -DVERSION="$VERSION" -DSRC="../$APP" -DOUTFILE="../$OUT/ReKapture-Setup-$VERSION.exe" ReKapture.nsi)
 
 echo "== portable zip"
 STAGE="build/portable/ReKapture Portable"
