@@ -1,14 +1,21 @@
-# Builds and publishes a release when a version tag (v1.2.3) is pushed.
-# The tag must match appVersion in app_windows.go and winres/winres.json.
-# Release notes come from notes/<tag>.md when that file exists.
+# Publishes a release whenever main has a version with no release yet.
+# To release: set appVersion in app_windows.go and the version in
+# winres/winres.json, add notes/v<version>.md, and push to main. GitHub then
+# builds the installer, the portable zip and SHA256SUMS.txt, and publishes
+# them as release v<version>. Installed copies update from it.
 name: Release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -16,11 +23,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Read the version
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(sed -n 's/^const appVersion = "\(.*\)"$/\1/p' app_windows.go)
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release v$V already exists, nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-go@v5
+        if: steps.ver.outputs.skip != 'true'
         with:
           go-version-file: go.mod
 
       - name: Install build tools
+        if: steps.ver.outputs.skip != 'true'
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q nsis zip
@@ -28,22 +49,26 @@ jobs:
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Unit tests
+        if: steps.ver.outputs.skip != 'true'
         run: go test -count=1 -run 'Classify|GameTracker|DiscordRoot|EffectiveDiscord|AudioTrackLayout|NormalizeGames|NewerVersion|ParseSums|Updater|AllowedDownload|ApplyPortable|PortableData|ArgsAreValid' .
 
       - name: Download FFmpeg (Windows, LGPL)
+        if: steps.ver.outputs.skip != 'true'
         run: |
           curl -fsSL -o ffmpeg.zip https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl.zip
           unzip -q ffmpeg.zip -d ffmpeg-dl
 
       - name: Build installer and portable zip
+        if: steps.ver.outputs.skip != 'true'
         env:
           MAKENSIS_FLAGS: -V2
-        run: scripts/build-release.sh "${GITHUB_REF_NAME#v}" ffmpeg-dl/ffmpeg-master-latest-win64-lgpl
+        run: scripts/build-release.sh "${{ steps.ver.outputs.version }}" ffmpeg-dl/ffmpeg-master-latest-win64-lgpl
 
       - name: Publish the release
+        if: steps.ver.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          V="${GITHUB_REF_NAME#v}"
-          if [ -f "notes/$GITHUB_REF_NAME.md" ]; then NOTES=(--notes-file "notes/$GITHUB_REF_NAME.md"); else NOTES=(--generate-notes); fi
-          gh release create "$GITHUB_REF_NAME" dist/"$V"/* --verify-tag --title "ReKapture $V" "${NOTES[@]}"
+          V="${{ steps.ver.outputs.version }}"
+          if [ -f "notes/v$V.md" ]; then NOTES=(--notes-file "notes/v$V.md"); else NOTES=(--generate-notes); fi
+          gh release create "v$V" dist/"$V"/* --target "$GITHUB_SHA" --title "ReKapture $V" "${NOTES[@]}"

@@ -61,17 +61,14 @@ scripts/build-release.sh builds everything a release needs in one go:
     scripts/build-release.sh 2.5.0 /path/to/ffmpeg-master-latest-win64-lgpl
 
 It writes dist/2.5.0/ReKapture-Setup-2.5.0.exe, ReKapture-Portable-2.5.0.zip
-and SHA256SUMS.txt. Publish them as a GitHub release tagged v2.5.0:
+and SHA256SUMS.txt.
 
-    git tag v2.5.0 && git push origin v2.5.0
-
-GitHub then builds and publishes the release by itself (see
-.github/workflows/release.yml). Put the release notes in notes/v2.5.0.md first.
-To publish by hand instead:
-
-    gh release create v2.5.0 dist/2.5.0/* --title "ReKapture 2.5.0" --notes "..."
-
-Installed copies check that repository's latest release and update
+On GitHub this happens by itself: when main has a version (appVersion in
+app_windows.go) that has no release yet, the Release workflow
+(.github/workflows/release.yml) builds those files and publishes release
+v<version>, with notes from notes/v<version>.md. So to release, bump the
+version in app_windows.go and winres/winres.json, add the notes file, and
+push. Installed copies check that repository's latest release and update
 themselves. Keep the three file names exactly like this: ReKapture looks
 for them by name, and won't install anything that doesn't match
 SHA256SUMS.txt.
