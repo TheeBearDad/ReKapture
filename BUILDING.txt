@@ -1,0 +1,118 @@
+Building ReKapture from source
+==============================
+
+ReKapture is a Go program with a WebView2 user interface (ui/index.html,
+embedded into the .exe). Capture and encoding are done by a bundled
+ffmpeg.exe. You can build it on Windows, or cross-compile it from Linux or macOS.
+
+
+WHAT YOU NEED
+-------------
+- Go 1.24 or newer (https://go.dev/dl)
+- An FFmpeg build for Windows. Use a recent "master" LGPL build from
+  https://github.com/BtbN/FFmpeg-Builds/releases
+  (ffmpeg-master-latest-win64-lgpl.zip). It must include gfxcapture and
+  NVENC, which these builds do.
+- Optional, to change the icon or version info: go-winres
+  (go install github.com/tc-hib/go-winres@latest)
+- Optional, to build the installer: NSIS 3 (https://nsis.sourceforge.io)
+
+
+BUILD THE APP
+-------------
+From this folder:
+
+  Windows (PowerShell):
+    $env:GOOS="windows"; $env:GOARCH="amd64"
+    go build -trimpath -ldflags "-s -w -H windowsgui" -o build\ReKapture.exe .
+
+  Linux or macOS:
+    GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w -H windowsgui" -o build/ReKapture.exe .
+
+Then put the files together like this:
+
+  ReKapture\
+    ReKapture.exe
+    README.txt
+    ffmpeg\ffmpeg.exe
+    ffmpeg\LICENSE.txt      (from the FFmpeg zip)
+
+ReKapture looks for ffmpeg\ffmpeg.exe (or ffmpeg.exe) next to itself.
+
+The icon and version info come from rsrc_windows_amd64.syso. After changing
+winres/winres.json or the icons, regenerate it:
+
+    go-winres make --arch amd64 --in winres/winres.json --out rsrc
+
+Also update appVersion in app_windows.go when you change the version.
+
+
+PORTABLE VERSION
+----------------
+Use the same folder as above, plus an empty or explanatory file named
+portable.txt next to ReKapture.exe. Settings and the log then go in a
+"Data" folder beside it instead of AppData.
+
+
+RELEASES
+--------
+scripts/build-release.sh builds everything a release needs in one go:
+
+    scripts/build-release.sh 2.5.0 /path/to/ffmpeg-master-latest-win64-lgpl
+
+It writes dist/2.5.0/ReKapture-Setup-2.5.0.exe, ReKapture-Portable-2.5.0.zip
+and SHA256SUMS.txt. Publish them as a GitHub release tagged v2.5.0:
+
+    gh release create v2.5.0 dist/2.5.0/* --title "ReKapture 2.5.0" --notes "..."
+
+Installed copies check that repository's latest release and update
+themselves. Keep the three file names exactly like this: ReKapture looks
+for them by name, and won't install anything that doesn't match
+SHA256SUMS.txt.
+
+
+INSTALLER
+---------
+Put the app files in build\app (ReKapture.exe, README.txt, ffmpeg\...),
+then from the installer folder:
+
+    makensis -DVERSION=2.5.0 -DSRC=..\build\app -DOUTFILE=..\build\ReKapture-Setup-2.5.0.exe ReKapture.nsi
+
+The installer defaults to C:\Program Files (x86)\ReKapture. Its Finish page
+offers "Start ReKapture" and "Open the README". It also adds an uninstaller
+to Settings > Apps.
+
+
+TESTS
+-----
+The tests run on Linux. They stand in synthetic video and audio for
+Windows capture, and a software encoder for NVENC. Point them at a Linux
+build of the same FFmpeg version the app ships:
+
+    GL_FFMPEG=/path/to/ffmpeg go test .
+
+They cover the replay buffer, recording, audio/video sync, smoothness (no
+repeated frames), the editor, Discord sharing (against a fake server), the
+capture test, portable mode, game detection and following, and the Discord
+audio track layout.
+
+
+WHERE THINGS ARE
+----------------
+app_windows.go       window, tray, hotkeys, bindings between the UI and Go
+engine.go            replay buffer, recording, saving clips
+ffargs.go            the FFmpeg command lines (capture, encoders)
+audio_windows.go     game and microphone capture (WASAPI)
+apploopback_windows.go  per-app audio capture (Discord on its own track)
+games.go             game detection, the game tracker, finding Discord
+tracks.go            audio track names
+overlay_windows.go   in-game toasts and REC badge
+clips.go             clip list, thumbnails, previews, local media server
+editor.go            trim and audio volume editor
+share.go             Discord copy-to-paste and webhook posting
+capturetest.go       the Video page's capture test
+settings.go          settings and defaults
+portable.go          portable mode
+ui/index.html        the whole user interface
+installer/           NSIS installer script and artwork
+winres/              icons and version info

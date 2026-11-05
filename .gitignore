@@ -1,0 +1,8 @@
+# build output and downloads
+build/
+dist/
+*.exe
+*.zip
+*.part
+# keep the Windows resource file (icon and version info)
+!rsrc_windows_amd64.syso

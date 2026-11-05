@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReKapture</title>
+<style>
+:root{
+  --black:#050606; --rail:#0A0B0C; --panel:#121415; --raised:#1A1D1F; --line:#272B2E; --line2:#33383C;
+  --text:#ECEFF1; --muted:#8C949A; --dim:#5E666C;
+  --green:#76B900; --green-hi:#8CD600; --green-ink:#0B1400; --green-wash:rgba(118,185,0,.12); --green-ring:rgba(118,185,0,.22); --green-old:#4E7D05; --green-bar:#76B900;
+  --red:#E5484D; --amber:#F2A93B;
+  --cut:14px;
+  --f:"Bahnschrift","DIN Alternate","Segoe UI",system-ui,sans-serif;
+  --fc:"Bahnschrift SemiCondensed","Bahnschrift","Arial Narrow","Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--black);color:var(--text);font:15px/1.45 var(--f);-webkit-font-smoothing:antialiased;user-select:none;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.app{display:grid;grid-template-columns:212px 1fr;height:100vh}
+
+/* rail */
+.rail{background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 12px 14px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 22px}
+.brand svg{flex:none}
+.brand b{font:600 19px/1 var(--fc);letter-spacing:.2px}
+.brand small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:6px;color:var(--muted);position:relative}
+.nav button svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7}
+.nav button:hover{color:var(--text);background:#121416}
+.nav button[aria-current=page]{color:var(--text);background:var(--raised)}
+.nav button[aria-current=page]::before{content:"";position:absolute;left:-12px;top:8px;bottom:8px;width:3px;background:var(--green);border-radius:0 2px 2px 0}
+.nav button:focus-visible{outline:2px solid var(--green)}
+.gpu{margin-top:auto;padding:12px 10px 4px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.gpu strong{display:block;color:var(--text);font:500 14px/1.3 var(--fc);margin-bottom:4px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--dim);margin-right:6px;vertical-align:1px}
+.dot.ok{background:var(--green)} .dot.bad{background:var(--red)}
+
+/* main */
+main{overflow-y:auto;padding:26px 34px 40px;scrollbar-color:#2a2e31 transparent}
+.page{display:none;max-width:920px}
+.page.on{display:block}
+h1{font:600 26px/1.1 var(--fc);margin:0 0 4px;letter-spacing:.2px}
+.lede{color:var(--muted);margin:0 0 22px;max-width:62ch}
+h2{font:600 16px/1.2 var(--fc);margin:0 0 3px;letter-spacing:.2px}
+.sub{color:var(--muted);font-size:13.5px;margin:0}
+
+/* the signature: chamfered panels + replay strip */
+.cut{clip-path:polygon(0 0,calc(100% - var(--cut)) 0,100% var(--cut),100% 100%,var(--cut) 100%,0 calc(100% - var(--cut)))}
+.hero{background:var(--panel);padding:20px 22px 18px;position:relative}
+.hero-top{display:flex;align-items:center;gap:14px}
+.state{font:600 13px/1 var(--f);padding:6px 10px 6px 9px;border-radius:999px;background:var(--raised);color:var(--muted);display:inline-flex;align-items:center;gap:7px}
+.state i{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.state.buffering{color:var(--green-hi);background:var(--green-wash)} .state.buffering i{background:var(--green);box-shadow:0 0 0 4px var(--green-ring)}
+.state.recording{color:#ff8a8d;background:rgba(229,72,77,.14)} .state.recording i{background:var(--red);animation:pulse 1.2s infinite}
+.state.standby i{background:transparent;box-shadow:inset 0 0 0 2px var(--green)}
+.state.error,.state.waiting{color:var(--amber);background:rgba(242,169,59,.12)} .state.error i,.state.waiting i{background:var(--amber)}
+@keyframes pulse{50%{opacity:.35}}
+.hero-spec{margin-left:auto;color:var(--muted);font:14px var(--fc);text-align:right}
+.strip{margin:20px 0 10px;height:44px;display:flex;gap:3px;align-items:stretch}
+.strip span{flex:1;background:#1E2224;transform-origin:bottom;transition:background .25s}
+.strip span.f{background:var(--green-bar)}
+.strip span.f.old{background:var(--green-old)}
+.strip.off span{background:#16191B}
+.strip-legend{display:flex;justify-content:space-between;color:var(--muted);font:13px var(--fc)}
+.strip-legend b{color:var(--text);font-weight:600}
+.upbanner{display:flex;align-items:center;gap:14px;justify-content:space-between;margin:-6px 0 18px;padding:10px 12px 10px 14px;border-left:3px solid var(--green);background:var(--green-wash);border-radius:0 6px 6px 0;font-size:14px}
+.updates{margin:4px 0 30px;padding:18px 20px;background:var(--panel);border-radius:8px;display:flex;flex-direction:column;gap:12px;max-width:640px}
+.updates h2{margin:0;font-size:16px}
+.updates p{margin:0}
+.updates .notes{white-space:pre-wrap;color:var(--muted);font-size:13.5px;max-height:180px;overflow:auto;border-left:2px solid var(--line);padding-left:12px}
+.nav button.dot span::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-left:7px;vertical-align:middle}
+.err{margin-top:14px;padding:10px 12px;border-left:3px solid var(--amber);background:rgba(242,169,59,.08);color:#f6d29a;font-size:13.5px;display:none}
+.err.on{display:block}
+
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.act{background:var(--panel);padding:18px 20px;display:flex;align-items:center;gap:16px}
+.act h2{font-size:17px}
+.act .grow{flex:1;min-width:0}
+.kbd{display:inline-flex;gap:3px;margin-top:6px}
+.kbd kbd{font:500 12px/1 var(--f);padding:4px 6px 3px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;color:var(--muted);background:#15181A}
+.btn{all:unset;cursor:pointer;font:600 14.5px/1 var(--f);padding:12px 18px;border-radius:6px;background:var(--raised);color:var(--text);text-align:center;white-space:nowrap}
+.btn:hover{background:#23272A}
+.btn.primary{background:var(--green);color:var(--green-ink)} .btn.primary:hover{background:var(--green-hi)}
+.btn.danger{background:var(--red);color:#fff}
+.btn:disabled,.btn[aria-disabled=true]{opacity:.4;pointer-events:none}
+.btn.small{padding:8px 12px;font-size:13px;font-weight:500}
+.btn:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.recbtn{all:unset;cursor:pointer;width:54px;height:54px;border-radius:50%;border:2px solid var(--line2);display:grid;place-items:center;flex:none}
+.recbtn i{width:22px;height:22px;border-radius:50%;background:var(--red);transition:border-radius .2s,width .2s,height .2s}
+.recbtn.on{border-color:var(--red)} .recbtn.on i{border-radius:4px;width:18px;height:18px}
+.recbtn:hover{border-color:#555}
+.recbtn:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+.timer{font:600 26px/1 var(--fc);font-variant-numeric:tabular-nums;color:var(--text)}
+
+/* switch */
+.switch{all:unset;cursor:pointer;width:46px;height:26px;border-radius:13px;background:#2B3033;position:relative;flex:none;transition:background .2s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#C9CED1;transition:transform .2s,background .2s}
+.switch[aria-checked=true]{background:var(--green)} .switch[aria-checked=true]::after{transform:translateX(20px);background:#fff}
+.switch:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.switch:disabled{opacity:.4;cursor:default}
+
+/* clips */
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin:30px 0 10px}
+.library{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;align-items:start}
+.viewer{position:relative;background:#000;border-radius:6px;aspect-ratio:16/9;display:grid;place-items:center;overflow:hidden}
+.viewer video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
+.viewer-note{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:var(--muted);font-size:14px;pointer-events:none}
+.viewer-note[data-busy]::before{content:"";width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--green);animation:spin 1s linear infinite;margin:0 auto 10px;display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.viewer-info{display:flex;align-items:center;gap:8px;margin-top:10px;min-width:0;flex-wrap:wrap}
+.viewer-info .t{flex:1 0 100%;min-width:0;margin-bottom:2px}
+.viewer-info b{display:block;font:600 15px/1.3 var(--fc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.viewer-info span{color:var(--muted);font:13px var(--fc)}
+.cliplist{display:flex;flex-direction:column;gap:2px;max-height:380px;overflow-y:auto;scrollbar-color:#2a2e31 transparent}
+.clip{all:unset;cursor:pointer;display:grid;grid-template-columns:112px minmax(0,1fr);gap:12px;align-items:center;padding:6px;border-radius:6px;position:relative}
+.clip:hover{background:#121416}
+.clip[aria-current=true]{background:var(--raised)}
+.clip[aria-current=true]::before{content:"";position:absolute;left:-1px;top:10px;bottom:10px;width:3px;border-radius:2px;background:var(--green)}
+.clip:focus-visible{outline:2px solid var(--green)}
+.thumb{width:112px;aspect-ratio:16/9;background:#1A1D1F center/cover no-repeat;border-radius:4px;position:relative;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb i{position:absolute;left:5px;bottom:5px;font:600 10.5px/1 var(--f);font-style:normal;padding:3px 5px;border-radius:3px;background:rgba(0,0,0,.72);color:#fff}
+.clip .n{font:500 14px/1.3 var(--f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clip .m{color:var(--muted);font:12.5px/1.4 var(--fc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{color:var(--muted);padding:14px 6px}
+/* editor */
+.ed-top{display:flex;align-items:center;gap:14px;margin-bottom:16px;min-width:0}
+.ed-top h1{margin:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ed-top .sub{white-space:nowrap}
+.ed-player{position:relative;background:#000;aspect-ratio:16/9;max-height:46vh;width:100%;border-radius:6px;overflow:hidden;display:grid;place-items:center}
+.ed-player video{width:100%;height:100%;object-fit:contain;background:#000}
+.tl{position:relative;height:64px;margin:16px 0 6px;border-radius:6px;background:#15181A;cursor:pointer;touch-action:none;user-select:none}
+.tl-strip{position:absolute;inset:4px 0;display:flex;overflow:hidden;border-radius:4px;pointer-events:none}
+.tl-strip span{flex:1;background-repeat:no-repeat;background-color:#1E2224;border-right:1px solid #0B0C0D}
+.tl-dim{position:absolute;top:0;bottom:0;background:rgba(5,6,6,.72);pointer-events:none}
+.tl-dim.l{left:0;border-radius:6px 0 0 6px}.tl-dim.r{right:0;border-radius:0 6px 6px 0}
+.tl-sel{position:absolute;top:0;bottom:0;border-top:3px solid var(--green);border-bottom:3px solid var(--green);pointer-events:none}
+.tl-h{all:unset;position:absolute;top:-4px;bottom:-4px;width:14px;margin-left:-7px;background:var(--green);border-radius:4px;cursor:ew-resize;display:grid;place-items:center;z-index:2}
+.tl-h::after{content:"";width:2px;height:22px;border-left:2px solid var(--green-ink);border-right:2px solid var(--green-ink);opacity:.55;box-sizing:content-box;width:2px}
+.tl-h:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.tl-head{position:absolute;top:-8px;bottom:-8px;width:2px;margin-left:-1px;background:#fff;pointer-events:none;z-index:3;box-shadow:0 0 0 1px rgba(0,0,0,.5)}
+.tl-head::before{content:"";position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:#fff}
+.tl-scale{display:flex;justify-content:space-between;color:var(--dim);font:12px var(--fc);font-variant-numeric:tabular-nums}
+.ed-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
+.ed-controls .spacer{flex:1}
+.tbox{display:flex;align-items:center;gap:6px}
+.tbox label{color:var(--muted);font-size:13px}
+.tbox input{width:92px;font-variant-numeric:tabular-nums}
+.ed-len{font:600 15px var(--fc);font-variant-numeric:tabular-nums;color:var(--text);padding:0 6px}
+.ed-keys{color:var(--dim);font-size:12.5px;margin:6px 0 0}
+.ed-keys kbd{font:500 11.5px/1 var(--f);padding:3px 5px 2px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;color:var(--muted);background:#15181A;margin:0 2px}
+.ed-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.ed-panel{background:var(--panel);padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.vol{display:grid;grid-template-columns:120px minmax(0,1fr) 46px 76px;align-items:center;gap:12px}
+.vol .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vol .pc{font:600 14px var(--fc);font-variant-numeric:tabular-nums;text-align:right}
+.vol .btn.small{padding:8px 0;text-align:center}
+.vol .btn.small[aria-pressed=true]{background:var(--red);color:#fff}
+.vol input[type=range]{min-width:80px;width:100%;max-width:none}
+.ed-panel>.seg{align-self:flex-start}
+#edTracks{display:flex;flex-direction:column;gap:12px}
+.vol.muted .nm,.vol.muted .pc{color:var(--dim)}
+.prog{height:6px;border-radius:3px;background:#2B3033;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--green);transition:width .2s}
+.ed-save{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.warn{color:var(--amber);font-size:13.5px;margin:0}
+@media (max-width:980px){.ed-cols{grid-template-columns:1fr}}
+/* sharing */
+.hooks{display:flex;flex-direction:column;gap:2px;max-width:620px}
+.hook{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;background:var(--panel);border-radius:6px}
+.hook svg{width:20px;height:20px;fill:var(--muted)}
+.hook b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hook span{color:var(--muted);font:12.5px var(--fc)}
+.hook.game{grid-template-columns:minmax(0,1fr) auto auto}
+.hook.game .seg button{padding:5px 10px;font-size:13px}
+.addhook{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) auto;gap:8px;max-width:620px}
+.addhook input{width:100%}
+.steps{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px;line-height:1.7;max-width:62ch}
+.steps b{color:var(--text);font-weight:500}
+dialog.share{border:none;padding:0;background:var(--panel);color:var(--text);width:min(520px,92vw);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+dialog.share::backdrop{background:rgba(0,0,0,.6)}
+.share-in{padding:22px 24px;display:flex;flex-direction:column;gap:14px}
+.share-in h2{font-size:19px;display:flex;align-items:center;gap:10px}
+.share-in h2 svg{width:22px;height:22px;fill:#5865F2}
+.share-clip{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
+.share-clip .thumb{width:96px}
+.share-clip b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.share-clip span{color:var(--muted);font:13px var(--fc)}
+textarea{background:var(--raised);border:1px solid var(--line);border-radius:7px;padding:9px 11px;resize:vertical;min-height:62px;font:inherit;color:inherit;outline:none}
+textarea:focus{border-color:var(--green)}
+.share-foot{display:flex;align-items:center;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.share-foot .hint{margin-right:auto}
+.share select{min-width:0;width:100%}
+/* appearance */
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.swatch{all:unset;cursor:pointer;width:34px;height:34px;border-radius:8px;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.swatch[aria-pressed=true]::after{content:"";position:absolute;inset:-4px;border-radius:11px;border:2px solid var(--text)}
+.swatch:focus-visible{outline:2px solid var(--text);outline-offset:3px}
+input[type=range].hue{background:linear-gradient(90deg,#f00,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00);height:10px;border-radius:5px;max-width:420px}
+input[type=range].hue::-webkit-slider-thumb{border-color:#fff;background:var(--green);width:22px;height:22px}
+.picker{display:inline-flex;align-items:center;gap:10px;cursor:pointer;color:var(--text)}
+.picker input{width:40px;height:34px;border:1px solid var(--line);border-radius:7px;background:var(--panel);padding:3px;cursor:pointer}
+.picker input::-webkit-color-swatch-wrapper{padding:0}.picker input::-webkit-color-swatch{border:none;border-radius:4px}
+#hexIn{width:110px;font-variant-numeric:tabular-nums;text-transform:uppercase}
+.sample{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 18px;background:var(--panel)}
+.sample .mini{display:flex;gap:3px;height:26px;width:150px}
+.sample .mini span{flex:1;background:var(--green-bar)} .sample .mini span:nth-child(-n+3){background:var(--green-old)} .sample .mini span:nth-child(-n+1){background:#1E2224}
+.link{all:unset;cursor:pointer;color:var(--green-hi);font-size:13.5px}
+.link:hover{text-decoration:underline}
+.link:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+/* settings */
+.group{border-top:1px solid var(--line);padding:20px 0;display:grid;grid-template-columns:240px 1fr;gap:24px}
+.group:first-of-type{border-top:none;padding-top:4px}
+.ctl{display:flex;flex-direction:column;gap:14px;min-width:0}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.row label.l{color:var(--muted);font-size:13.5px;flex-basis:100%;margin-bottom:-4px}
+.ctl>.seg,.ctl>.corners{align-self:flex-start}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{all:unset;cursor:pointer;padding:7px 12px;border-radius:5px;color:var(--muted);font-size:14px;white-space:nowrap}
+.seg button:hover{color:var(--text)}
+.seg button[aria-pressed=true]{background:var(--raised);color:var(--text);box-shadow:inset 0 -2px 0 var(--green)}
+.seg button:disabled{opacity:.35;cursor:not-allowed}
+.seg button:focus-visible{outline:2px solid var(--green)}
+select,input[type=number],input[type=text],input[type=password]{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 10px;min-width:0;outline:none}
+select{min-width:280px;max-width:100%;cursor:pointer}
+select:focus,input:focus{border-color:var(--green)}
+input[type=number]{width:96px;font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:160px;max-width:420px;height:4px;border-radius:2px;background:linear-gradient(var(--green),var(--green)) 0/var(--p,50%) 100% no-repeat,#2B3033;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--green)}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(--green-ring)}
+.val{font:600 16px var(--fc);min-width:84px;font-variant-numeric:tabular-nums}
+.hint{color:var(--dim);font-size:13px;margin:0}
+.hint b{color:var(--muted);font-weight:500}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:560px}
+.toggle-row div{min-width:0}
+.path{flex:1;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:left}
+.hk{display:flex;align-items:center;justify-content:space-between;gap:14px;max-width:560px;padding:4px 0}
+.hk button.k{all:unset;cursor:pointer;min-width:150px;text-align:center;padding:8px 12px;border-radius:7px;border:1px solid var(--line2);background:var(--panel);font:500 14px var(--f)}
+.hk button.k.listen{border-color:var(--green);color:var(--green-hi)}
+.hk button.k:focus-visible{outline:2px solid var(--green)}
+.corners{display:grid;grid-template-columns:repeat(2,38px);gap:6px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:7px;width:max-content}
+.corners button{all:unset;cursor:pointer;height:24px;border-radius:4px;background:#1E2224;position:relative}
+.corners button[aria-pressed=true]{background:var(--green)}
+.corners button:focus-visible{outline:2px solid var(--green)}
+.about p{max-width:64ch;color:var(--muted)}
+.about p b{color:var(--text);font-weight:500}
+
+/* toast inside the app */
+.flash{position:fixed;right:22px;bottom:20px;background:var(--raised);border-left:3px solid var(--green);padding:10px 14px;border-radius:4px;font-size:13.5px;opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s;pointer-events:none;max-width:420px}
+.flash.on{opacity:1;transform:none}
+.flash.warn{border-left-color:var(--amber)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:980px){.library{grid-template-columns:1fr}.cliplist{max-height:none}}
+@media (max-width:820px){.app{grid-template-columns:64px 1fr}.brand b,.brand small,.nav span,.gpu{display:none}.actions{grid-template-columns:1fr}.group{grid-template-columns:1fr;gap:12px}main{padding:20px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <img src="data:image/png;base64,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" width="32" height="32" alt="" style="display:block;flex:none">
+      <div><b>ReKapture</b><small>NVENC recorder</small></div>
+    </div>
+    <nav class="nav" aria-label="Sections">
+      <button data-page="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
+      <button data-page="video"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="14" height="14" rx="2"/><path d="M16.5 10l5-3v10l-5-3"/></svg><span>Video</span></button>
+      <button data-page="audio"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg><span>Audio</span></button>
+      <button data-page="replay"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4.5h4.5"/><path d="M12 7.5V12l3 2"/></svg><span>Replay &amp; saving</span></button>
+      <button data-page="keys"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h1M10 10h1M14 10h1M18 10h0M7 14h10"/></svg><span>Shortcuts &amp; overlay</span></button>
+      <button data-page="share"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.8 7.4-4.4M8.3 13.2l7.4 4.4"/></svg><span>Sharing</span></button>
+      <button data-page="look"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.6-.9 1.2-1.8-.5-1-.2-2.2 1.1-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></svg><span>Appearance</span></button>
+      <button data-page="about"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg><span>About</span></button>
+    </nav>
+    <div class="gpu"><strong id="gpuName">Detecting GPU…</strong><span id="nvencLine"><span class="dot"></span>Checking NVENC</span></div>
+  </aside>
+
+  <main id="main">
+    <!-- HOME -->
+    <section class="page on" id="p-home" aria-labelledby="h-home">
+      <h1 id="h-home">Home</h1>
+      <p class="lede" id="homeLede">Records on your GPU's video encoder, so games keep their frame rate.</p>
+      <div class="upbanner" id="updBanner" hidden><span id="updBannerText"></span><button class="btn small primary" id="updBannerGo">See what's new</button></div>
+
+      <div class="hero cut">
+        <div class="hero-top">
+          <span class="state" id="state"><i></i><span id="stateText">Off</span></span>
+          <span class="hero-spec" id="spec"></span>
+        </div>
+        <div class="strip" id="strip" aria-hidden="true"></div>
+        <div class="strip-legend"><span id="bufLeft">Instant Replay is off</span><span id="bufRight"></span></div>
+        <div class="err" id="err" role="alert"><span id="errText"></span> <button class="link" id="errLog">Open log file</button></div>
+      </div>
+
+      <div class="actions">
+        <div class="act cut">
+          <button class="switch" role="switch" id="replaySwitch" aria-checked="false" aria-label="Instant Replay"></button>
+          <div class="grow">
+            <h2>Instant Replay</h2>
+            <div class="kbd" id="kSave"></div>
+          </div>
+          <button class="btn primary" id="saveBtn">Save replay</button>
+        </div>
+        <div class="act cut">
+          <button class="recbtn" id="recBtn" aria-label="Start recording"><i></i></button>
+          <div class="grow">
+            <h2 id="recTitle">Record</h2>
+            <div class="kbd" id="kRec"></div>
+          </div>
+          <span class="timer" id="recTimer" hidden>0:00</span>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h2>Recent clips</h2>
+        <button class="link" id="openOut">Open clips folder</button>
+      </div>
+      <div class="library">
+        <div>
+          <div class="viewer">
+            <video id="player" controls preload="metadata" playsinline disablepictureinpicture></video>
+            <div class="viewer-note" id="viewerNote">Saved clips play here.</div>
+          </div>
+          <div class="viewer-info" id="viewerInfo" hidden>
+            <div class="t"><b id="viName"></b><span id="viMeta"></span></div>
+            <button class="btn small primary" id="viEdit">Edit</button>
+            <button class="btn small" id="viShare">Share to Discord</button>
+            <button class="btn small" id="viPlay">Open in player</button>
+            <button class="btn small" id="viShow">Show in folder</button>
+          </div>
+        </div>
+        <div class="cliplist" id="clips" role="list" aria-label="Recent clips"></div>
+      </div>
+    </section>
+
+    <!-- VIDEO -->
+    <section class="page" id="p-video" aria-labelledby="h-video">
+      <h1 id="h-video">Video</h1>
+      <p class="lede">Changes apply right away. Changing these restarts the replay buffer.</p>
+
+      <div class="group">
+        <div><h2>What to capture</h2><p class="sub">Automatic follows whatever game you're playing. Or pick one monitor or one window yourself.</p></div>
+        <div class="ctl">
+          <div class="seg" data-k="captureMode"><button data-v="auto">Automatic</button><button data-v="monitor">Monitor</button><button data-v="window">Game or app window</button></div>
+          <div class="row" data-show="s.captureMode==='auto'"><label class="l">Record the game's</label>
+            <div class="seg" data-k="autoTarget"><button data-v="window">Window</button><button data-v="monitor">Whole monitor</button></div></div>
+          <p class="hint" data-show="s.captureMode==='auto'&&s.autoTarget==='window'">Only the game is recorded, so Discord pop-ups and notifications stay out. If a game records black, switch to Whole monitor.</p>
+          <p class="hint" data-show="s.captureMode==='auto'&&s.autoTarget==='monitor'">Records the monitor the game is on, including anything that pops up over it.</p>
+          <div class="row" data-show="s.captureMode==='auto'"><label class="l">With no game open</label><select id="monAutoSel" aria-label="Monitor to record when no game is open"></select></div>
+          <div class="row" data-show="s.captureMode==='monitor'"><select id="monSel" data-k="monitorId" aria-label="Monitor"></select></div>
+          <div class="row" data-show="s.captureMode==='window'"><select id="winSel" data-k="windowExe" aria-label="Window"></select><button class="btn small" id="refreshWin">Refresh list</button></div>
+          <p class="hint" data-show="s.captureMode==='window'">Pick the game while it's running. ReKapture finds it again by program name next time you launch it.</p>
+          <div class="toggle-row"><div>Show the mouse cursor</div><button class="switch" role="switch" data-k="showCursor" aria-label="Show the mouse cursor"></button></div>
+        </div>
+      </div>
+
+      <div class="group" data-show="s.captureMode==='auto'||s.replayWhen==='games'">
+        <div><h2>Games</h2><p class="sub">ReKapture spots games from Steam, Epic, Xbox, GOG, EA, Ubisoft and Riot, plus anything running full screen. Correct it here if it gets one wrong.</p></div>
+        <div class="ctl">
+          <div class="hooks" id="games"></div>
+          <div class="row"><select id="gameAddSel" aria-label="Program to add as a game"></select><button class="btn small" id="gameAdd">Add as a game</button></div>
+          <p class="hint">Start the game first so it shows in the list.</p>
+        </div>
+      </div>
+
+      <div class="group">
+        <div><h2>Resolution</h2><p class="sub">Scaling happens on the GPU before encoding.</p></div>
+        <div class="ctl">
+          <div class="seg" data-k="resolution"><button data-v="native">Native</button><button data-v="2160">2160p</button><button data-v="1440">1440p</button><button data-v="1080">1080p</button><button data-v="900">900p</button><button data-v="720">720p</button><button data-v="custom">Custom</button></div>
+          <div class="row" data-show="s.resolution==='custom'"><input type="number" data-k="customWidth" min="160" max="8192" step="2" aria-label="Width"><span class="hint">by</span><input type="number" data-k="customHeight" min="160" max="8192" step="2" aria-label="Height"><span class="hint">pixels</span></div>
+          <div class="row" data-show="s.resolution!=='custom'"><label class="l">Aspect ratio</label>
+            <div class="seg" data-k="aspect"><button data-v="source">Same as screen</button><button data-v="16:9">16:9</button><button data-v="21:9">21:9</button><button data-v="32:9">32:9</button><button data-v="4:3">4:3</button><button data-v="9:16">9:16</button><button data-v="1:1">1:1</button></div>
+          </div>
+          <div class="row" data-show="s.aspect!=='source'||s.resolution==='custom'"><label class="l">Fill</label>
+            <div class="seg" data-k="aspectFit"><button data-v="fit">Fit with bars</button><button data-v="crop">Crop to fill</button><button data-v="stretch">Stretch</button></div>
+          </div>
+          <p class="hint">Output: <b id="outRes">—</b></p>
+        </div>
+      </div>
+
+      <div class="group">
+        <div><h2>Frame rate</h2><p class="sub">Match your monitor, or go lower for smaller files.</p></div>
+        <div class="ctl">
+          <div class="row"><div class="seg" data-k="fps" data-num><button data-v="30">30</button><button data-v="60">60</button><button data-v="120">120</button><button data-v="144">144</button><button data-v="165">165</button><button data-v="240">240</button></div>
+          <input type="number" data-k="fps" min="10" max="240" aria-label="Custom frame rate"><span class="hint">fps</span></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div><h2>Encoder</h2><p class="sub">H.264 plays everywhere. HEVC makes smaller files at the same quality. AV1 is smallest, but some editors can't open it yet.</p></div>
+        <div class="ctl">
+          <div class="seg" data-k="codec" id="codecSeg"><button data-v="h264">H.264</button><button data-v="hevc">HEVC (H.265)</button><button data-v="av1">AV1</button></div>
+          <div class="row"><label class="l">Bitrate mode</label><div class="seg" data-k="rateControl"><button data-v="cbr">Constant</button><button data-v="vbr">Variable</button><button data-v="cq">Constant quality</button></div></div>
+          <div class="row" data-show="s.rateControl!=='cq'"><label class="l">Bitrate</label><input type="range" data-k="bitrateMbps" min="1" max="300" step="1" aria-label="Bitrate"><span class="val" id="v-bitrate"></span></div>
+          <div class="row" data-show="s.rateControl==='cq'"><label class="l">Quality</label><input type="range" data-k="cq" min="1" max="51" step="1" aria-label="Quality level"><span class="val" id="v-cq"></span></div>
+          <p class="hint" data-show="s.rateControl==='cq'">Lower numbers look better and make bigger files.</p>
+          <div class="row" data-show="s.rateControl==='cq'"><label class="l">Bitrate cap</label><input type="range" data-k="bitrateMbps" min="1" max="300" step="1" aria-label="Bitrate cap"><span class="val" id="v-cap"></span></div>
+          <div class="row"><label class="l">Encoder preset</label><input type="range" data-k="preset" min="1" max="7" step="1" aria-label="Encoder preset"><span class="val" id="v-preset"></span></div>
+          <div class="row"><label class="l">File type</label><div class="seg" data-k="container"><button data-v="mp4">MP4</button><button data-v="mkv">MKV</button></div></div>
+          <p class="hint" id="sizeHint"></p>
+        </div>
+      </div>
+
+      <div class="group">
+        <div><h2>Capture test</h2><p class="sub">Checks how many frames Windows hands to ReKapture from your game, before any encoding. Use it if clips look choppy.</p></div>
+        <div class="ctl">
+          <div class="row"><button class="btn small" id="capTest">Test capture</button><span class="hint" id="capTestState"></span></div>
+          <p class="hint">Start the test, switch to your game within 5 seconds, then keep turning the camera for 10 seconds.</p>
+          <p class="hint" id="capTestOut" hidden></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- AUDIO -->
+    <section class="page" id="p-audio" aria-labelledby="h-audio">
+      <h1 id="h-audio">Audio</h1>
+      <p class="lede">Game audio is everything your PC plays, apart from Discord if you give it its own track. If a device is unplugged, ReKapture switches to your default device and keeps recording.</p>
+      <div class="group">
+        <div><h2>Game audio</h2><p class="sub">Captured from an output device.</p></div>
+        <div class="ctl">
+          <div class="toggle-row"><div>Record game audio</div><button class="switch" role="switch" data-k="systemAudio" aria-label="Record game audio"></button></div>
+          <div class="row" data-show="s.systemAudio"><select id="outSel" data-k="systemDeviceId" aria-label="Output device"></select></div>
+          <p class="hint" data-show="s.systemAudio&&s.discordAudio!=='mix'">While Discord is open, game audio is taken from every app except Discord, whichever device it plays on.</p>
+        </div>
+      </div>
+      <div class="group" data-show="s.systemAudio">
+        <div><h2>Discord</h2><p class="sub">Voice chat can go on its own track, so you can turn it down or cut it before you share a clip.</p></div>
+        <div class="ctl">
+          <div class="seg" data-k="discordAudio"><button data-v="separate">Its own track</button><button data-v="mix">Mixed into game audio</button><button data-v="exclude">Leave it out</button></div>
+          <p class="hint" id="discordHint"></p>
+        </div>
+      </div>
+      <div class="group">
+        <div><h2>Microphone</h2><p class="sub">Your voice, on its own track if you want.</p></div>
+        <div class="ctl">
+          <div class="toggle-row"><div>Record my microphone</div><button class="switch" role="switch" data-k="mic" aria-label="Record my microphone"></button></div>
+          <div class="row" data-show="s.mic"><select id="inSel" data-k="micDeviceId" aria-label="Microphone"></select></div>
+        </div>
+      </div>
+      <div class="group" data-show="s.systemAudio&&(s.mic||s.discordAudio==='separate')">
+        <div><h2>Audio tracks</h2><p class="sub">Separate tracks let you change each volume later in the editor.</p></div>
+        <div class="ctl">
+          <div class="seg" data-k="audioTracks"><button data-v="both">Mixed + separate</button><button data-v="mixed">One mixed track</button><button data-v="separate">Separate only</button></div>
+          <p class="hint" id="trackHint"></p>
+        </div>
+      </div>
+      <div class="group">
+        <div><h2>Quality</h2><p class="sub">AAC audio.</p></div>
+        <div class="ctl"><div class="seg" data-k="audioKbps" data-num><button data-v="128">128 kbps</button><button data-v="192">192 kbps</button><button data-v="256">256 kbps</button><button data-v="320">320 kbps</button></div></div>
+      </div>
+    </section>
+
+    <!-- REPLAY -->
+    <section class="page" id="p-replay" aria-labelledby="h-replay">
+      <h1 id="h-replay">Replay &amp; saving</h1>
+      <p class="lede">While Instant Replay is on, ReKapture keeps the last few minutes in a hidden folder next to your clips and deletes the oldest part as it goes.</p>
+      <div class="group">
+        <div><h2>When to run</h2><p class="sub">Instant Replay can wait until you start a game, so nothing records while you're on the desktop.</p></div>
+        <div class="ctl">
+          <div class="seg" data-k="replayWhen"><button data-v="always">Always</button><button data-v="games">Only while playing a game</button></div>
+          <p class="hint" data-show="s.replayWhen==='games'">It turns on a couple of seconds after a game appears and pauses when the game closes. Alt-tabbing doesn't stop it. Recording with the hotkey works any time.</p>
+        </div>
+      </div>
+      <div class="group">
+        <div><h2>Replay length</h2><p class="sub">How far back a saved replay reaches.</p></div>
+        <div class="ctl">
+          <div class="row"><input type="range" id="replayLen" min="0" max="13" step="1" aria-label="Replay length"><span class="val" id="v-replay"></span></div>
+          <p class="hint" id="replayDisk"></p>
+        </div>
+      </div>
+      <div class="group">
+        <div><h2>Save clips to</h2><p class="sub">Replays and recordings both go here.</p></div>
+        <div class="ctl">
+          <div class="row"><span class="path" id="outPath"></span><button class="btn small" id="browse">Change folder</button></div>
+          <div class="toggle-row"><div>Make a folder for each game<p class="hint">Named after the game you're playing.</p></div><button class="switch" role="switch" data-k="folderPerGame" aria-label="Make a folder for each game"></button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KEYS -->
+    <section class="page" id="p-keys" aria-labelledby="h-keys">
+      <h1 id="h-keys">Shortcuts &amp; overlay</h1>
+      <p class="lede">Shortcuts work everywhere, even in full-screen games. The overlay is left out of your recordings.</p>
+      <div class="group">
+        <div><h2>Shortcuts</h2><p class="sub">Click one, then press the new keys. Esc cancels.</p></div>
+        <div class="ctl">
+          <div class="hk"><span>Save replay</span><button class="k" data-hk="hotkeySave"></button></div>
+          <div class="hk"><span>Start or stop recording</span><button class="k" data-hk="hotkeyRecord"></button></div>
+          <div class="hk"><span>Turn Instant Replay on or off</span><button class="k" data-hk="hotkeyToggle"></button></div>
+          <p class="hint" id="hkErr" style="color:var(--amber)"></p>
+        </div>
+      </div>
+      <div class="group">
+        <div><h2>Overlay</h2><p class="sub">Small notices drawn over your game.</p></div>
+        <div class="ctl">
+          <div class="toggle-row"><div>Show a notice when a clip is saved</div><button class="switch" role="switch" data-k="overlayToasts" aria-label="Show a notice when a clip is saved"></button></div>
+          <div class="toggle-row"><div>Show a recording timer while recording</div><button class="switch" role="switch" data-k="overlayRec" aria-label="Show a recording timer"></button></div>
+          <div class="row"><label class="l">Screen corner</label><div class="corners" data-k="overlayCorner"><button data-v="tl" aria-label="Top left"></button><button data-v="tr" aria-label="Top right"></button><button data-v="bl" aria-label="Bottom left"></button><button data-v="br" aria-label="Bottom right"></button></div></div>
+        </div>
+      </div>
+      <div class="group">
+        <div><h2>Startup</h2><p class="sub">Closing the window keeps ReKapture running in the system tray.</p></div>
+        <div class="ctl">
+          <div class="toggle-row"><div>Start ReKapture when Windows starts</div><button class="switch" role="switch" data-k="startWithWindows" aria-label="Start with Windows"></button></div>
+          <div class="toggle-row"><div>Start hidden in the tray</div><button class="switch" role="switch" data-k="startMinimized" aria-label="Start hidden in the tray"></button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EDITOR -->
+    <section class="page" id="p-edit" aria-labelledby="h-edit">
+      <div class="ed-top">
+        <button class="btn small" id="edBack">Back to clips</button>
+        <h1 id="h-edit">Edit clip</h1>
+        <span class="sub" id="edSub"></span>
+      </div>
+      <div class="ed-player"><video id="edVideo" controls preload="auto" playsinline disablepictureinpicture></video><div class="viewer-note" id="edNote" hidden></div></div>
+
+      <div class="tl" id="tl" aria-label="Timeline">
+        <div class="tl-strip" id="tlStrip"></div>
+        <div class="tl-dim l" id="tlDimL"></div><div class="tl-dim r" id="tlDimR"></div>
+        <div class="tl-sel" id="tlSel"></div>
+        <button class="tl-h" id="tlStart" aria-label="Trim start"></button>
+        <button class="tl-h" id="tlEnd" aria-label="Trim end"></button>
+        <div class="tl-head" id="tlHead"></div>
+      </div>
+      <div class="tl-scale"><span>0:00</span><span id="tlMid"></span><span id="tlDur"></span></div>
+
+      <div class="ed-controls">
+        <div class="tbox"><label for="edStartIn">Start</label><input type="text" id="edStartIn" spellcheck="false"><button class="btn small" id="edSetStart" title="Set the start to the playhead (I)">Use playhead</button></div>
+        <span class="ed-len" id="edLen"></span>
+        <div class="tbox"><label for="edEndIn">End</label><input type="text" id="edEndIn" spellcheck="false"><button class="btn small" id="edSetEnd" title="Set the end to the playhead (O)">Use playhead</button></div>
+        <span class="spacer"></span>
+        <button class="btn small" id="edPlaySel">Play selection</button>
+        <button class="btn small" id="edResetTrim">Reset</button>
+      </div>
+      <p class="ed-keys"><kbd>Space</kbd> play or pause &nbsp; <kbd>I</kbd> set start &nbsp; <kbd>O</kbd> set end &nbsp; <kbd>←</kbd><kbd>→</kbd> skip 1 second &nbsp; <kbd>,</kbd><kbd>.</kbd> step one frame</p>
+
+      <div class="ed-cols">
+        <div class="ed-panel cut">
+          <div><h2>Audio</h2><p class="sub" id="edAudioSub">Volume changes apply when you save.</p></div>
+          <div id="edTracks"></div>
+        </div>
+        <div class="ed-panel cut">
+          <div><h2>Save</h2><p class="sub">Your original clip is kept unless you choose to replace it.</p></div>
+          <div class="seg" id="edMode"><button data-v="copy" aria-pressed="true">Save as a new clip</button><button data-v="replace">Replace the original</button></div>
+          <div class="seg" id="edCut"><button data-v="exact" aria-pressed="true">Exact cut</button><button data-v="fast">Fast cut</button></div>
+          <p class="hint" id="edCutHint"></p>
+          <p class="warn" id="edWarn" hidden></p>
+          <div class="ed-save"><button class="btn primary" id="edSave">Save clip</button><button class="btn small" id="edCancel" hidden>Cancel</button><span class="hint" id="edStatus"></span></div>
+          <div class="prog" id="edProg" hidden><i></i></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SHARING -->
+    <section class="page" id="p-share" aria-labelledby="h-share">
+      <h1 id="h-share">Sharing</h1>
+      <p class="lede">Share clips from the Home screen with Share to Discord. Copy to paste works in any chat with no setup. Posting to a channel needs a webhook link, added here. Either way, ReKapture shrinks clips that are too big and converts them so they play right in the chat.</p>
+      <div class="group">
+        <div><h2>Discord channels</h2><p class="sub">Each channel needs its own webhook link.</p></div>
+        <div class="ctl">
+          <div class="hooks" id="hooks"></div>
+          <div class="addhook">
+            <input type="text" id="hookName" placeholder="Name, like #clips" aria-label="Channel name" maxlength="60">
+            <input type="password" id="hookURL" placeholder="Paste the webhook link" aria-label="Webhook link" spellcheck="false" autocomplete="off">
+            <button class="btn small primary" id="hookAdd">Add channel</button>
+          </div>
+          <p class="hint" id="hookMsg"></p>
+          <ol class="steps">
+            <li>In Discord, hover the channel and click the gear to <b>Edit Channel</b>.</li>
+            <li>Open <b>Integrations</b>, then <b>Webhooks</b>, then <b>New Webhook</b>.</li>
+            <li>Click <b>Copy Webhook URL</b> and paste it above.</li>
+          </ol>
+          <p class="hint">You need the Manage Webhooks permission on that server. Anyone with the link can post in the channel, so keep it to yourself.</p>
+        </div>
+      </div>
+      <div class="group">
+        <div><h2>Upload limit</h2><p class="sub">Posts follow the server's limit, not your Nitro.</p></div>
+        <div class="ctl">
+          <div class="seg" data-k="discordMB" data-num><button data-v="20">20 MB (any server)</button><button data-v="50">50 MB (Boost level 2)</button><button data-v="100">100 MB (Boost level 3)</button></div>
+          <p class="hint">Clips bigger than this are shrunk before posting. Shorter clips keep more quality.</p>
+        </div>
+      </div>
+      <div class="group">
+        <div><h2>Post text</h2><p class="sub">You can still edit it each time.</p></div>
+        <div class="ctl"><div class="toggle-row"><div>Start each post with the game name</div><button class="switch" role="switch" data-k="shareGameName" aria-label="Start each post with the game name"></button></div></div>
+      </div>
+    </section>
+
+    <!-- APPEARANCE -->
+    <section class="page" id="p-look" aria-labelledby="h-look">
+      <h1 id="h-look">Appearance</h1>
+      <p class="lede">Pick the color ReKapture uses for buttons, highlights, the window border and in-game notices.</p>
+      <div class="group">
+        <div><h2>Accent color</h2><p class="sub">Changes apply right away.</p></div>
+        <div class="ctl">
+          <div class="swatches" id="swatches" role="group" aria-label="Preset colors"></div>
+          <div class="row"><label class="l" for="hue">Hue</label><input type="range" class="hue" id="hue" min="0" max="359" step="1"></div>
+          <div class="row">
+            <label class="picker"><input type="color" id="colorPick" aria-label="Custom color"><span>Custom color</span></label>
+            <input type="text" id="hexIn" maxlength="7" spellcheck="false" aria-label="Color code">
+            <button class="btn small" id="resetAccent">Reset to NVIDIA green</button>
+          </div>
+          <div class="sample cut" aria-hidden="true">
+            <span class="state buffering"><i></i><span>Instant Replay on</span></span>
+            <div class="mini"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <span class="switch" role="presentation" aria-checked="true"></span>
+            <span class="btn primary">Save replay</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="page about" id="p-about" aria-labelledby="h-about">
+      <h1 id="h-about">About</h1>
+      <p class="lede" id="ver">ReKapture</p>
+      <section class="updates" aria-labelledby="h-upd">
+        <h2 id="h-upd">Updates</h2>
+        <p id="updText" aria-live="polite">Checking…</p>
+        <div class="notes" id="updNotes" hidden></div>
+        <div class="prog" id="updProg" hidden><i></i></div>
+        <div class="row">
+          <button class="btn small primary" id="updInstall" hidden>Install update</button>
+          <button class="btn small" id="updCancel" hidden>Cancel</button>
+          <button class="btn small" id="updCheck">Check for updates</button>
+          <button class="link" id="updAll">All versions on GitHub</button>
+        </div>
+        <div class="toggle-row"><div>Check for updates automatically<p class="hint">Once when ReKapture starts and every few hours. Nothing installs without you clicking Install.</p></div><button class="switch" role="switch" data-k="autoUpdate" aria-label="Check for updates automatically"></button></div>
+      </section>
+      <p><b>How it works.</b> Windows' own capture API hands each frame to your NVIDIA GPU's dedicated video encoder (NVENC) without it passing through the CPU. That's the same encoder chip the NVIDIA App uses, so the cost to your games is about the same.</p>
+      <p id="whereNote"><b>Where things are.</b> Settings are saved in your AppData folder. If something goes wrong, the log file says why.</p>
+      <div class="row" style="margin:18px 0 26px"><button class="btn small" id="openLog">Open log file</button><button class="btn small" id="quit">Quit ReKapture</button></div>
+      <p>Video encoding by FFmpeg (LGPL). ReKapture is an independent project and isn't affiliated with or endorsed by NVIDIA. NVIDIA, GeForce and NVENC are trademarks of NVIDIA Corporation.</p>
+    </section>
+  </main>
+</div>
+<div class="flash" id="flash" role="status"></div>
+<dialog class="share" id="shareDlg" aria-labelledby="shTitle">
+  <div class="share-in">
+    <h2 id="shTitle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 5.3A16.6 16.6 0 0 0 15.5 4l-.5 1a15.3 15.3 0 0 0-6 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C1.8 9.2 1.1 13 1.5 16.8a16.7 16.7 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.8l.4-.3a11.9 11.9 0 0 0 11.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.7a16.6 16.6 0 0 0 5-2.5c.5-4.4-.8-8.2-2.9-11.5zM8.7 14.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Share to Discord</h2>
+    <div class="share-clip"><span class="thumb" id="shThumb"></span><div style="min-width:0"><b id="shName"></b><span id="shMeta"></span></div></div>
+    <div class="seg" id="shMode" role="tablist" style="align-self:flex-start"><button data-v="copy" role="tab">Copy to paste</button><button data-v="post" role="tab">Post to a channel</button></div>
+    <div id="shCopy" class="ctl" style="gap:12px">
+      <label class="hint">Fit for</label>
+      <div class="seg" id="shSize" style="align-self:flex-start"><button data-v="20">20 MB (free)</button><button data-v="50">50 MB (Nitro Basic)</button><button data-v="500">500 MB (Nitro)</button></div>
+      <p class="hint">The clip goes on your clipboard as a file. Press Ctrl+V in any Discord chat, DM or server to attach it.</p>
+    </div>
+    <div id="shPostBox" class="ctl" style="gap:12px">
+      <label class="hint" for="shHook">Channel</label>
+      <select id="shHook"></select>
+      <label class="hint" for="shMsg">Message</label>
+      <textarea id="shMsg" maxlength="2000" placeholder="Say something (optional)"></textarea>
+    </div>
+    <div id="shEmpty" hidden>
+      <p class="sub">Add a Discord channel first. It takes about a minute: you paste a webhook link from the channel's settings. Or use Copy to paste, which needs no setup.</p>
+    </div>
+    <p class="hint" id="shPlan"></p>
+    <div class="prog" id="shProg" hidden><i></i></div>
+    <div class="share-foot">
+      <span class="hint" id="shStatus"></span>
+      <button class="btn small" id="shClose">Close</button>
+      <button class="btn small" id="shCancel" hidden>Cancel</button>
+      <button class="btn small" id="shSetup" hidden>Set up a channel</button>
+      <button class="btn small" id="shEditor" hidden>Trim in editor</button>
+      <button class="btn small primary" id="shOpen" hidden>Open in Discord</button>
+      <button class="btn primary" id="shGo">Copy</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const native = typeof window.glGetInit === "function";
+let S=null, ST={}, MONS=[], WINS=[], OUTS=[], INS=[], NV={checked:false}, saveT=null, hkListen=null;
+const REPLAY_STOPS=[10,15,20,30,45,60,90,120,180,300,420,600,900,1200];
+const PRESET_NAMES=["","Fastest","Faster","Fast","Balanced","Quality","High quality","Best quality"];
+const VK={8:"Backspace",9:"Tab",13:"Enter",19:"Pause",32:"Space",33:"PgUp",34:"PgDn",35:"End",36:"Home",44:"PrtSc",45:"Insert",46:"Delete",145:"ScrollLock",186:";",187:"=",188:",",189:"-",190:".",191:"/",192:"`",219:"[",220:"\\",221:"]",222:"'"};
+
+/* ---------- mock for previewing in a browser ---------- */
+if(!native){
+  const mk=(o)=>Object.assign({captureMode:"auto",autoTarget:"window",discordAudio:"separate",replayWhen:"always",autoUpdate:true,games:[{exe:"Cyberpunk2077.exe",name:"Cyberpunk 2077",isGame:true},{exe:"cs2.exe",name:"Counter-Strike 2",isGame:true},{exe:"Photos.exe",name:"Photos",isGame:false}],monitorId:"\\\\.\\DISPLAY1",windowExe:"",showCursor:true,resolution:"native",customWidth:1920,customHeight:1080,aspect:"source",aspectFit:"fit",fps:60,codec:"h264",rateControl:"vbr",bitrateMbps:50,cq:23,preset:5,container:"mp4",systemAudio:true,systemDeviceId:"",mic:true,micDeviceId:"",audioTracks:"both",audioKbps:192,replayEnabled:true,replaySeconds:120,outputDir:"C:\\Users\\Tyler\\Videos\\ReKapture",folderPerGame:true,hotkeySave:{mods:5,key:121},hotkeyRecord:{mods:5,key:120},hotkeyToggle:{mods:5,key:88},overlayToasts:true,overlayRec:true,overlayCorner:"tr",startWithWindows:false,startMinimized:false,accent:"#76B900",discordMB:20,shareGameName:true,webhooks:[],clipboardMB:20,shareMode:"copy"},o);
+  const mock={settings:mk({}),gpu:"NVIDIA GeForce RTX 5080",version:"1.0.0",nvenc:{checked:true,h264:true,hevc:true,av1:true},
+    monitors:[{id:"\\\\.\\DISPLAY1",name:"Display 1 — 2560×1440 @ 240 Hz (main)",width:2560,height:1440},{id:"\\\\.\\DISPLAY2",name:"Display 2 — 1920×1080 @ 60 Hz",width:1920,height:1080}],
+    windows:[{exe:"cs2.exe",title:"Counter-Strike 2"},{exe:"FortniteClient-Win64-Shipping.exe",title:"Fortnite"}],
+    outputs:[{id:"o1",name:"Speakers (Realtek(R) Audio)"},{id:"o2",name:"Headphones (Arctis Nova 7)"}],inputs:[{id:"i1",name:"Microphone (Arctis Nova 7)"}],hotkeyErrors:"",
+    status:{state:"buffering",replayOn:true,recording:false,bufferSeconds:84,video:"HEVC, 2560×1440, 60 fps, 50 Mbps VBR",source:"Display 1 — 2560×1440 @ 240 Hz (main)",clips:[
+      {path:"/tmp/gl-mock/clip1.webm",name:"Cyberpunk 2077 2026-11-04 06-18-24 Replay.mp4",kind:"Replay",sizeMB:19,when:"06:18"},
+      {path:"/tmp/gl-mock/clip2.webm",name:"Cyberpunk 2077 2026-11-04 06-18-05 Replay.mp4",kind:"Replay",sizeMB:57,when:"06:18"},
+      {path:"/tmp/gl-mock/clip3.webm",name:"Counter-Strike 2 2026-11-03 21-14-08 Recording.mp4",kind:"Recording",sizeMB:2310,when:"Nov 3, 21:14"},
+      {path:"/tmp/gl-mock/clip4.webm",name:"Desktop 2026-11-03 19-40-12 Replay.mp4",kind:"Replay",sizeMB:388,when:"Nov 3, 19:40"}]}};
+  window.__mockThumb="/tmp/gl-mock/thumb.jpg";
+  window.glGetInit=async()=>mock; window.glSaveSettings=async s=>({settings:s,error:""});
+  ["glSetReplay","glSaveReplay","glToggleRecord","glOpenPath","glQuit","glHide","glOpenLog","glSetHotkeyCapture"].forEach(n=>window[n]=async()=>{});
+  window.glPickFolder=async()=>{};
+  window.glProbeClip=async p=>({duration:6,width:1280,height:536,fps:30,videoCodec:"vp9",mixable:true,audio:[{index:0,title:"Game + Discord + Mic"},{index:1,title:"Game audio"},{index:2,title:"Discord"},{index:3,title:"Microphone"}]});
+  window.glEditSave=async s=>{ window.__lastSpec=s; let p=0; const t=setInterval(()=>{ p+=.25; if(p<1) window.__glEditProgress(p); else { clearInterval(t); window.__glEditDone({ok:true,path:s.path.replace(".webm"," (edited).webm")}); } },150); };
+  window.glEditCancel=async()=>{};
+  window.glWebhookCheck=async u=>setTimeout(()=>window.__glWebhookChecked(/discord\.com\/api\/webhooks\//.test(u)? {ok:true,name:"Captain Hook",webhook:{url:u,guildId:"1",channelId:"2",name:""}} : {ok:false,error:"That isn't a Discord webhook link. It should start with https://discord.com/api/webhooks/"}),300);
+  window.glUpdateState=async()=>({phase:"available",current:"2.4.0",latest:"2.5.0",notes:"- Updates itself from GitHub\n- Faster game detection",checked:"Nov 5, 7:40 AM"});
+  window.glUpdateCheck=async()=>setTimeout(()=>window.__glUpdate({phase:"available",current:"2.4.0",latest:"2.5.0",notes:"- Updates itself from GitHub\n- Faster game detection",checked:"Nov 5, 7:41 AM"}),400);
+  window.glUpdateInstall=async()=>{ let x=0; const t=setInterval(()=>{ x+=20; window.__glUpdate({phase:x<100?"downloading":"installing",current:"2.4.0",latest:"2.5.0",percent:x}); if(x>=100) clearInterval(t); },300); };
+  window.glUpdateCancel=async()=>{}; window.glOpenReleases=async()=>{};
+  window.glCaptureTest=async()=>{ let n=5; const t=setInterval(()=>{ if(n>0) window.__glCapTestProgress({phase:"wait",left:n--}); else { clearInterval(t); window.__glCapTestProgress({phase:"run",left:10}); setTimeout(()=>window.__glCapTestDone({ok:true,report:{fps:58,summary:"Windows delivered 58 frames per second (typical gap 16.7 ms, 95% under 33.3 ms, longest 67 ms). Windows itself is delivering frames unevenly or too slowly for your frame rate, so the capture method is the bottleneck."}}),1200); } },250); };
+  window.glCopyClip=async (p,mb)=>{ window.__lastCopy={p,mb}; let x=0; const t=setInterval(()=>{ x+=.25; if(x<=1) window.__glShareProgress({stage:"prepare",p:x}); else { clearInterval(t); window.__glCopyDone({ok:true,sizeMB:Math.min(mb,19.2)}); } },120); };
+  window.glSharePlan=async (p,mb)=>(window.__mockTooLong? {encode:true,tooLong:true,summary:"This clip is too long to fit 20 MB and still look okay. Trim it to about 3m 15s in the editor first."} : (mb===500? {encode:false,remux:true,summary:"Repackages as MP4 so it plays in Discord, no quality loss (about 19.0 MB)."} : {encode:true,height:720,fps:60,videoKbps:2400,summary:`Shrinks to fit ${mb||20} MB: 720p, 60 fps.`}));
+  window.glShare=async (p,i,m)=>{ window.__lastShare={p,i,m}; let x=0; const t=setInterval(()=>{ x+=.25; if(x<=1) window.__glShareProgress({stage:"prepare",p:x}); else if(x<=2) window.__glShareProgress({stage:"upload",p:x-1}); else { clearInterval(t); window.__glShareDone({ok:true,messageUrl:"https://discord.com/channels/1/2/3",sizeMB:18.7,channel:(mock.settings.webhooks[i]||{}).name}); } },120); };
+  window.glShareCancel=async()=>{}; window.glOpenURL=async u=>{ window.__opened=u; };
+  window.glRefreshSources=async()=>mock;
+  const q=new URLSearchParams(location.search);
+  if(q.get("accent")) mock.settings.accent="#"+q.get("accent");
+  if(q.get("edit")) setTimeout(()=>openEditor(mock.status.clips[0]),300);
+  if(q.get("page")) setTimeout(()=>go(q.get("page")),0);
+  if(q.get("rec")) setTimeout(()=>window.__glStatus(Object.assign({},mock.status,{state:"recording",recording:true,recordSeconds:754})),50);
+}
+
+/* ---------- helpers ---------- */
+function hkText(h){ if(!h||!h.key) return "Not set"; const p=[]; if(h.mods&2)p.push("Ctrl"); if(h.mods&1)p.push("Alt"); if(h.mods&4)p.push("Shift"); if(h.mods&8)p.push("Win"); p.push(vkName(h.key)); return p.join(" + "); }
+function vkName(k){ if(k>=112&&k<=135) return "F"+(k-111); if((k>=48&&k<=57)||(k>=65&&k<=90)) return String.fromCharCode(k); if(k>=96&&k<=105) return "Num "+(k-96); return VK[k]||("Key "+k); }
+function kbd(el,h){ el.innerHTML=""; hkText(h).split(" + ").forEach(t=>{const k=document.createElement("kbd");k.textContent=t;el.appendChild(k);}); }
+function dur(s){ s=Math.round(s); if(s<60) return s+" sec"; const m=Math.floor(s/60), r=s%60; return r? `${m} min ${r} sec` : `${m} min`; }
+function clock(s){ const h=Math.floor(s/3600), m=Math.floor(s%3600/60), r=s%60; return (h? h+":"+String(m).padStart(2,"0") : m)+":"+String(r).padStart(2,"0"); }
+function size(mb){ return mb>=1024? (mb/1024).toFixed(1)+" GB" : Math.round(mb)+" MB"; }
+function flash(msg,warn){ const f=$("#flash"); f.textContent=msg; f.className="flash on"+(warn?" warn":""); clearTimeout(flash.t); flash.t=setTimeout(()=>f.className="flash"+(warn?" warn":""),2600); }
+function esc(t){ const d=document.createElement("div"); d.textContent=t; return d.innerHTML; }
+
+function geometry(){ // mirrors ComputeGeometry in Go, for the preview line
+  const mon=MONS.find(m=>m.id===S.monitorId)||MONS.find(m=>m.primary)||MONS[0]||{width:1920,height:1080};
+  const win=S.captureMode==="window"||(S.captureMode==="auto"&&S.autoTarget==="window");
+  let sw=win?0:mon.width, sh=win?0:mon.height;
+  const ev=v=>{v=Math.round(v); return v%2?v-1:v;};
+  const src= sw&&sh? sw/sh : 16/9;
+  let t=S.aspect==="source"? src : (()=>{const [a,b]=S.aspect.split(":").map(Number); return a/b;})();
+  if(S.resolution==="custom") return [S.customWidth&~1,S.customHeight&~1];
+  if(S.resolution==="native"){ if(!sw) return S.aspect==="source"? null : [1920,ev(1920/t)];
+    if(S.aspect==="source") return [sw&~1,sh&~1]; return t>src? [sw&~1,ev(sw/t)] : [ev(sh*t),sh&~1]; }
+  const p=+S.resolution; return t>=1? [ev(p*t),p] : [p,ev(p/t)];
+}
+
+/* ---------- render settings ---------- */
+function fillSelect(sel,items,val,def){ sel.innerHTML=""; if(def){const o=new Option(def,"");sel.add(o);} items.forEach(i=>sel.add(new Option(i.name||i.title,i.id??i.exe)));
+  if(val && ![...sel.options].some(o=>o.value===val)){ sel.add(new Option(val+" (not running)",val)); } sel.value=val||""; }
+function renderSources(){
+  fillSelect($("#monSel"),MONS.map(m=>({id:m.id,name:m.name})),S.monitorId,"Main display");
+  fillSelect($("#monAutoSel"),MONS.map(m=>({id:m.id,name:m.name})),S.monitorId,"Main display");
+  const known=new Set((S.games||[]).map(g=>g.exe.toLowerCase()));
+  fillSelect($("#gameAddSel"),WINS.filter(w=>!known.has(w.exe.toLowerCase())).map(w=>({id:w.exe,name:`${w.title}  (${w.exe})`})),"",WINS.length?"Choose a running program…":"No windows found");
+  fillSelect($("#winSel"),WINS.map(w=>({id:w.exe,name:`${w.title}  (${w.exe})`})),S.windowExe,WINS.length?"Choose a window…":"No windows found");
+  fillSelect($("#outSel"),OUTS,S.systemDeviceId,"Default output device");
+  fillSelect($("#inSel"),INS,S.micDeviceId,"Default microphone");
+}
+function audioSources(){
+  const l=[]; if(S.systemAudio){ l.push("game"); if(S.discordAudio==="separate"&&S.audioTracks!=="mixed") l.push("Discord"); } if(S.mic) l.push("mic"); return l;
+}
+function trackHint(src){
+  if(src.length<2) return "";
+  const names=src.join(", ").replace(/, ([^,]*)$/," and $1");
+  const own=src.map((n,i)=>`track ${i+2} is ${n}`).join(", ");
+  return {both:`Track 1 has ${names} together, so it plays right anywhere. Then ${own}.`,
+    mixed:`${names[0].toUpperCase()+names.slice(1)} are mixed into one track.`,
+    separate:`Each has its own track: ${src.map((n,i)=>`track ${i+1} is ${n}`).join(", ")}. Some players only play track 1.`}[S.audioTracks];
+}
+function renderGames(){
+  const list=S.games||[], box=$("#games"); if(!box) return;
+  box.innerHTML = list.length? list.map((g,i)=>`<div class="hook game"><div style="min-width:0"><b>${esc(g.name)}</b><span>${esc(g.exe)}</span></div>
+      <div class="seg" role="group" aria-label="${esc(g.name)}"><button data-gi="${i}" data-gv="1" aria-pressed="${!!g.isGame}">Game</button><button data-gi="${i}" data-gv="0" aria-pressed="${!g.isGame}">Not a game</button></div>
+      <button class="btn small" data-grm="${i}" aria-label="Remove ${esc(g.name)}">Remove</button></div>`).join("")
+    : '<p class="hint">No games yet. Start one and it appears here.</p>';
+}
+function render(){
+  if(!S) return;
+  $$("[data-k]").forEach(el=>{
+    const k=el.dataset.k, v=S[k];
+    if(el.classList.contains("seg")||el.classList.contains("corners")) el.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.v)===String(v)));
+    else if(el.classList.contains("switch")) el.setAttribute("aria-checked", !!v);
+    else if(el.type==="range"){ el.value=v; el.style.setProperty("--p",((v-el.min)/(el.max-el.min)*100)+"%"); }
+    else if(el.tagName==="INPUT"){ if(document.activeElement!==el) el.value=v; }
+    else if(el.tagName==="SELECT"){ el.value=v||""; }
+  });
+  $$("[data-show]").forEach(el=>{ const s=S; el.hidden=!Function("s","return "+el.dataset.show)(s); });
+  $$("#codecSeg button").forEach(b=>{ b.disabled = NV.checked && NV[b.dataset.v]===false; b.title=b.disabled?"Your GPU's encoder doesn't support this":""; });
+  $("#v-bitrate").textContent=S.bitrateMbps+" Mbps"; $("#v-cap").textContent=S.bitrateMbps+" Mbps";
+  $("#v-cq").textContent=S.cq+(S.cq<=18?"  near-lossless":S.cq<=26?"  great":S.cq<=34?"  good":"  small files");
+  $("#v-preset").textContent=PRESET_NAMES[S.preset];
+  const g=geometry(); $("#outRes").textContent = g? `${g[0]} × ${g[1]} at ${S.fps} fps` : (S.captureMode==="auto"? `the game window's size at ${S.fps} fps` : `the window's own size at ${S.fps} fps`);
+  const src=audioSources(), nSrc=src.length;
+  const mbMin=S.rateControl==="cq"? null : S.bitrateMbps*60/8 + S.audioKbps*60/8/1000*(nSrc<2? nSrc : S.audioTracks==="both"? nSrc+1 : S.audioTracks==="mixed"? 1 : nSrc);
+  $("#sizeHint").innerHTML = mbMin? `About <b>${size(mbMin)}</b> per minute of video.` : `File size depends on what's on screen. The bitrate cap stops busy scenes from ballooning.`;
+  $("#trackHint").textContent = trackHint(src);
+  const dh={separate:"Discord gets its own track, and game audio leaves it out. The track is silent while Discord is closed.",mix:"Discord is part of the game audio, like everything else your PC plays.",exclude:"Discord isn't recorded at all, but you still hear it."}[S.discordAudio];
+  $("#discordHint").textContent = S.discordAudio==="separate"&&S.audioTracks==="mixed"? "You chose one mixed track under Audio tracks, so Discord is mixed in. Pick Mixed + separate there to give it its own track." : dh+" Needs Windows 10 version 2004 or newer.";
+  renderGames();
+  let idx=REPLAY_STOPS.indexOf(S.replaySeconds); if(idx<0) idx=REPLAY_STOPS.findIndex(x=>x>=S.replaySeconds); if(idx<0) idx=REPLAY_STOPS.length-1;
+  const rl=$("#replayLen"); rl.value=idx; rl.style.setProperty("--p",(idx/13*100)+"%"); $("#v-replay").textContent=dur(S.replaySeconds);
+  const per = S.rateControl==="cq"? S.bitrateMbps*1.0 : S.bitrateMbps;
+  $("#replayDisk").innerHTML=`Uses about <b>${size(per*(S.replaySeconds+8)/8)}</b> of disk space in the clips folder while on${S.rateControl==="cq"?" (estimate)":""}.`;
+  $("#outPath").textContent=S.outputDir; $("#outPath").title=S.outputDir;
+  $$("[data-hk]").forEach(b=>{ if(hkListen!==b) b.textContent=hkText(S[b.dataset.hk]); });
+  kbd($("#kSave"),S.hotkeySave); kbd($("#kRec"),S.hotkeyRecord);
+  renderAccent();
+  renderHooks();
+}
+
+function setK(k,v){
+  if(S[k]===v) return; S[k]=v; render();
+  clearTimeout(saveT); saveT=setTimeout(push, 350);
+}
+async function push(){
+  try{ const r=await glSaveSettings(S); if(r.error){ flash(r.error,true); } if(r.settings){ S=r.settings; } if(r.hotkeyErrors!==undefined) $("#hkErr").textContent=r.hotkeyErrors; render(); }
+  catch(e){ flash(String(e),true); }
+}
+
+/* ---------- wire controls ---------- */
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  const seg=b.closest(".seg,.corners");
+  if(seg && seg.dataset.k && b.dataset.v!==undefined){ const v=seg.hasAttribute("data-num")? +b.dataset.v : b.dataset.v; setK(seg.dataset.k,v); return; }
+  if(b.classList.contains("switch") && b.dataset.k){ setK(b.dataset.k, !S[b.dataset.k]); return; }
+  if(b.dataset.page){ go(b.dataset.page); return; }
+});
+$$("select[data-k]").forEach(el=>el.addEventListener("change",()=>setK(el.dataset.k, el.value)));
+$$("input[type=number][data-k]").forEach(el=>el.addEventListener("change",()=>{ let v=parseInt(el.value,10); if(isNaN(v)) return render();
+  const mn=+el.min, mx=+el.max; v=Math.min(mx,Math.max(mn,v)); if(el.step==="2") v&=~1; setK(el.dataset.k,v); }));
+$$("input[type=range][data-k]").forEach(el=>el.addEventListener("input",()=>setK(el.dataset.k, +el.value)));
+$("#replayLen").addEventListener("input",e=>setK("replaySeconds",REPLAY_STOPS[+e.target.value]));
+
+$("#monAutoSel").addEventListener("change",e=>setK("monitorId",e.target.value));
+$("#games").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return; const l=(S.games||[]).map(g=>({...g}));
+  if(b.dataset.gi!==undefined){ const g=l[+b.dataset.gi]; g.isGame=b.dataset.gv==="1"; setK("games",l); flash(g.isGame? `${g.name} counts as a game` : `${g.name} won't be treated as a game`); }
+  else if(b.dataset.grm!==undefined){ const g=l.splice(+b.dataset.grm,1)[0]; setK("games",l); flash("Removed "+g.name); }
+});
+$("#gameAdd").onclick=()=>{ const exe=$("#gameAddSel").value; if(!exe) return; const w=WINS.find(x=>x.exe===exe);
+  const l=[{exe,name:(w&&w.title)||exe.replace(/\.exe$/i,""),isGame:true},...(S.games||[])]; setK("games",l); renderSources(); flash(`${l[0].name} added`); };
+/* ---------- updates ---------- */
+let UPD={phase:"idle"};
+function renderUpdate(u){
+  UPD=u||UPD; const p=UPD.phase, avail=["available","downloading","ready","installing"].includes(p)||(p==="error"&&UPD.latest&&UPD.latest!==UPD.current);
+  const txt={idle:"Updates haven't been checked yet.", checking:"Checking GitHub for a new version…",
+    current:`You have the latest version (${UPD.current}).${UPD.checked?` Checked ${UPD.checked}.`:""}`,
+    available:`ReKapture ${UPD.latest} is available. You have ${UPD.current}.`,
+    downloading:`Downloading ReKapture ${UPD.latest}… ${Math.round(UPD.percent||0)}%`,
+    ready:`ReKapture ${UPD.latest} is downloaded and checked.`,
+    installing:"Installing. ReKapture will close and open again in a moment. Windows may ask for permission.",
+    error:sentence(UPD.error||"Something went wrong.")}[p]||"";
+  $("#updText").textContent=txt; $("#updText").style.color = p==="error"? "var(--amber)" : "";
+  const notes=$("#updNotes"); notes.hidden=!(avail&&UPD.notes); notes.textContent=UPD.notes||"";
+  $("#updProg").hidden=p!=="downloading"; $("#updProg i").style.width=Math.round(UPD.percent||0)+"%";
+  $("#updInstall").hidden=!(p==="available"||p==="ready"||(p==="error"&&avail)); $("#updInstall").textContent = p==="error"? "Try again" : "Install update";
+  $("#updCancel").hidden=p!=="downloading";
+  $("#updCheck").hidden=p==="downloading"||p==="installing"; $("#updCheck").setAttribute("aria-disabled", String(p==="checking"));
+  const show=avail&&p!=="installing"; $("#updBanner").hidden=!show; $("#updBannerText").textContent=`ReKapture ${UPD.latest} is available.`;
+  const nav=$('.nav button[data-page="about"]'); if(nav) nav.classList.toggle("dot",show);
+}
+window.__glUpdate=renderUpdate;
+function sentence(t){ t=String(t||"").trim(); if(!t) return t; t=t[0].toUpperCase()+t.slice(1); return /[.!?…]$/.test(t)? t : t+"."; }
+window.__glUpdateError=m=>{ renderUpdate(Object.assign({},UPD,{phase:"error",error:m})); flash(sentence(m),true); };
+$("#updCheck").onclick=()=>{ if($("#updCheck").getAttribute("aria-disabled")==="true") return; renderUpdate(Object.assign({},UPD,{phase:"checking"})); glUpdateCheck(); };
+$("#updInstall").onclick=()=>{ renderUpdate(Object.assign({},UPD,{phase:"downloading",percent:0})); glUpdateInstall(); };
+$("#updCancel").onclick=()=>glUpdateCancel();
+$("#updAll").onclick=()=>glOpenReleases();
+$("#updBannerGo").onclick=()=>go("about");
+window.__glGames=g=>{ if(!S) return; S.games=g||[]; renderSources(); render(); };
+function go(p){ const navP = p==="edit"? "home" : p; $$(".nav button").forEach(b=>b.toggleAttribute("aria-current",b.dataset.page===navP)); $$(".nav button[aria-current]").forEach(b=>b.setAttribute("aria-current","page"));
+  $$(".page").forEach(s=>s.classList.toggle("on",s.id==="p-"+p)); $("#main").scrollTop=0;
+  if(p==="video"||p==="audio") refreshSources(); }
+
+async function refreshSources(){ try{ const r=await glRefreshSources(); MONS=r.monitors||MONS; WINS=r.windows||[]; OUTS=r.outputs||[]; INS=r.inputs||[]; renderSources(); render(); }catch(e){} }
+$("#refreshWin").onclick=refreshSources;
+
+$("#replaySwitch").onclick=()=>{ const on=!ST.replayOn; ST.replayOn=on; S.replayEnabled=on; glSetReplay(on); renderStatus(ST); };
+$("#saveBtn").onclick=()=>glSaveReplay();
+$("#recBtn").onclick=()=>glToggleRecord();
+$("#openOut").onclick=()=>glOpenPath(S.outputDir,"folder");
+$("#browse").onclick=()=>glPickFolder();
+window.__glPicked=p=>{ if(p) setK("outputDir",p); };
+$("#openLog").onclick=()=>glOpenLog();
+$("#errLog").onclick=()=>glOpenLog();
+$("#quit").onclick=()=>glQuit();
+$("#clips").addEventListener("click",e=>{ const b=e.target.closest(".clip"); if(!b) return; const c=(ST.clips||[]).find(k=>k.path===b.dataset.path); if(c){ picked=true; showClip(c); } });
+$("#viPlay").onclick=()=>cur&&glOpenPath(cur.path,"play");
+$("#viEdit").onclick=()=>cur&&openEditor(cur);
+$("#viShare").onclick=()=>cur&&openShare(cur);
+$("#viShow").onclick=()=>cur&&glOpenPath(cur.path,"select");
+
+/* capture test */
+$("#capTest").onclick=async()=>{ if($("#capTest").getAttribute("aria-disabled")) return;
+  $("#capTest").setAttribute("aria-disabled","true"); $("#capTestOut").hidden=true;
+  try{ await glCaptureTest(); }catch(e){ window.__glCapTestDone({ok:false,error:String(e)}); } };
+window.__glCapTestProgress=p=>{ $("#capTestState").textContent = p.phase==="wait" ? `Switch to your game… starting in ${p.left}` : "Measuring for 10 seconds. Keep moving the camera."; };
+window.__glCapTestDone=r=>{ $("#capTest").removeAttribute("aria-disabled"); $("#capTestState").textContent=""; const o=$("#capTestOut"); o.hidden=false;
+  if(!r.ok){ o.textContent=r.error; o.style.color="var(--amber)"; return; }
+  o.textContent=r.report.summary; o.style.color = /bottleneck|almost no frames/.test(r.report.summary) ? "var(--amber)" : ""; };
+
+/* hotkey capture */
+$$("[data-hk]").forEach(b=>b.addEventListener("click",()=>{ if(hkListen) stopListen(); hkListen=b; b.classList.add("listen"); b.textContent="Press keys…"; glSetHotkeyCapture(true); }));
+function stopListen(){ if(!hkListen) return; hkListen.classList.remove("listen"); hkListen=null; glSetHotkeyCapture(false); render(); }
+document.addEventListener("keydown",e=>{
+  if(!hkListen) return; e.preventDefault(); e.stopPropagation();
+  if(e.key==="Escape"){ stopListen(); return; }
+  if([16,17,18,91,92].includes(e.keyCode)) { const m=(e.altKey?1:0)|(e.ctrlKey?2:0)|(e.shiftKey?4:0)|(e.metaKey?8:0); hkListen.textContent=hkText({mods:m,key:0}).replace(" + Not set","").replace("Not set","")+" + …"; return; }
+  const mods=(e.altKey?1:0)|(e.ctrlKey?2:0)|(e.shiftKey?4:0)|(e.metaKey?8:0);
+  const isF = e.keyCode>=112&&e.keyCode<=135;
+  if(!mods && !isF && ![19,44,145].includes(e.keyCode)){ hkListen.textContent="Add Ctrl, Alt or Shift"; return; }
+  const k=hkListen.dataset.hk; hkListen.classList.remove("listen"); hkListen=null; glSetHotkeyCapture(false);
+  setK(k,{mods,key:e.keyCode});
+},true);
+
+/* ---------- status ---------- */
+const STATE_TEXT={off:"Off",standby:"Waiting for a game",starting:"Starting…",buffering:"Instant Replay on",recording:"Recording",waiting:"Waiting",error:"Needs attention"};
+function buildStrip(){ const s=$("#strip"); s.innerHTML=""; for(let i=0;i<60;i++) s.appendChild(document.createElement("span")); }
+function renderStatus(st){
+  ST=st||ST;
+  const state=ST.state||"off";
+  const el=$("#state"); el.className="state "+state; $("#stateText").textContent=STATE_TEXT[state]||state;
+  $("#spec").textContent=ST.video||"";
+  $("#replaySwitch").setAttribute("aria-checked",!!ST.replayOn);
+  const total=(S&&S.replaySeconds)||120, have=Math.min(ST.bufferSeconds||0,total);
+  const strip=$("#strip"), cells=[...strip.children], n=cells.length, filled=ST.replayOn&&ST.state!=="error"? Math.round(have/total*n) : 0;
+  strip.classList.toggle("off",!ST.replayOn);
+  cells.forEach((c,i)=>{ c.classList.toggle("f", i>=n-filled); c.classList.toggle("old", i>=n-filled && i<n-filled+Math.round(filled*.15)); });
+  if(!ST.replayOn){ $("#bufLeft").textContent = ST.recording? "Instant Replay is off. Recording only." : "Instant Replay is off"; $("#bufRight").textContent=""; }
+  else if(state==="standby"){ $("#bufLeft").textContent="Instant Replay starts when you open a game"; $("#bufRight").textContent=""; }
+  else if(state==="buffering"||state==="recording"){ $("#bufLeft").innerHTML=`<b>${dur(have)}</b> of ${dur(total)} ready to save`; $("#bufRight").textContent=ST.game? "Following "+ST.game : (ST.source||""); }
+  else { $("#bufLeft").textContent = state==="waiting"? (ST.error||"Waiting…") : "Starting capture…"; $("#bufRight").textContent=""; }
+  const e=$("#err"); const showErr = ST.error && state!=="buffering" && state!=="recording"; $("#errText").textContent=ST.error||""; e.classList.toggle("on",!!showErr);
+  $("#saveBtn").setAttribute("aria-disabled", !(ST.replayOn && (state==="buffering"||state==="recording") && have>0));
+  const rec=!!ST.recording; $("#recBtn").classList.toggle("on",rec); $("#recBtn").setAttribute("aria-label",rec?"Stop recording":"Start recording");
+  $("#recTitle").textContent= rec? "Recording" : (ST.finalizing? "Saving…" : "Record");
+  $("#recTimer").hidden=!rec; $("#recTimer").textContent=clock(ST.recordSeconds||0);
+  renderClips(ST.clips||[]);
+  document.title = rec? `● ${clock(ST.recordSeconds||0)}  ReKapture` : "ReKapture";
+}
+window.__glStatus=renderStatus;
+
+/* ---------- clip library ---------- */
+let MEDIA="", cur=null, picked=false;
+const NAME_RE=/^(.*) (\d{4})-(\d{2})-(\d{2}) (\d{2})-(\d{2})-(\d{2}) (Replay|Recording)( \(\d+\))?(\.\w+)$/;
+function parseName(k){ const m=NAME_RE.exec(k.name); return m? {title:m[1], kind:m[8]} : {title:k.name.replace(/\.\w+$/,""), kind:k.kind}; }
+function mediaURL(kind,p){ if(MEDIA) return `${MEDIA}/${kind}?p=${encodeURIComponent(p)}`; return (kind==="thumb"||kind==="strip")? (window.__mockThumb||"") : p; }
+function note(t,busy){ const n=$("#viewerNote"); n.textContent=t||""; n.hidden=!t; n.toggleAttribute("data-busy",!!busy); }
+function showClip(c){
+  const v=$("#player"); cur=c;
+  if(!c){ v.removeAttribute("src"); v.load(); v.hidden=true; $("#viewerInfo").hidden=true; note("Saved clips play here."); markCurrent(); return; }
+  const n=parseName(c);
+  v.hidden=false; v.dataset.stage="orig"; v.poster=mediaURL("thumb",c.path); v.src=mediaURL("file",c.path); note("");
+  $("#viewerInfo").hidden=false; $("#viName").textContent=n.title; $("#viName").title=c.path;
+  $("#viMeta").textContent=`${n.kind}, ${c.when}, ${size(c.sizeMB)}`;
+  markCurrent();
+}
+function markCurrent(){ $$("#clips .clip").forEach(b=>b.setAttribute("aria-current", !!cur && b.dataset.path===cur.path)); }
+function playerFallback(){
+  const v=$("#player"); if(!cur) return;
+  if(v.dataset.stage==="orig" && MEDIA){ v.dataset.stage="preview"; note("Making a preview copy…", true); v.src=mediaURL("preview",cur.path); }
+  else { note("This clip can't play here. Use Open in player."); }
+}
+(()=>{ const v=$("#player");
+  v.addEventListener("error",playerFallback);
+  v.addEventListener("loadedmetadata",()=>{ if(v.videoWidth===0) playerFallback(); });
+  v.addEventListener("loadeddata",()=>note("")); })();
+function renderClips(clips){
+  const c=$("#clips"); const sig=JSON.stringify(clips);
+  if(c.dataset.sig===sig) return; c.dataset.sig=sig;
+  c.innerHTML = clips.length? clips.map(k=>{ const n=parseName(k); return `<button class="clip" role="listitem" data-path="${esc(k.path)}" title="${esc(k.name)}">
+      <span class="thumb"><img loading="lazy" alt="" src="${esc(mediaURL("thumb",k.path))}" onerror="this.remove()"><i>${esc(n.kind)}</i></span>
+      <span style="min-width:0"><span class="n" style="display:block">${esc(n.title)}</span><span class="m" style="display:block">${esc(k.when)}, ${size(k.sizeMB)}</span></span></button>`; }).join("")
+    : `<div class="empty">Nothing saved yet. Press ${esc(hkText(S&&S.hotkeySave))} in a game to save a replay.</div>`;
+  const v=$("#player");
+  const stillThere = cur && clips.some(k=>k.path===cur.path);
+  if(!clips.length) showClip(null);
+  else if(!stillThere || (!picked && (v.paused||v.ended) && clips[0].path!==cur.path)) showClip(clips[0]);
+  else markCurrent();
+}
+
+/* ---------- editor ---------- */
+const ED={clip:null,info:null,start:0,end:0,dur:0,vols:{},mutes:{},mode:"copy",cut:"exact",saving:false,selPlay:false,confirm:false};
+const edV=$("#edVideo");
+function tfmt(t){ t=Math.max(0,t); const m=Math.floor(t/60), s=t-m*60; return m+":"+s.toFixed(1).padStart(4,"0"); }
+function tparse(str){ str=String(str).trim(); if(!str) return NaN; const parts=str.split(":").map(Number); if(parts.some(isNaN)) return NaN;
+  return parts.reduce((acc,v)=>acc*60+v,0); }
+async function openEditor(c){
+  $("#player").pause();
+  go("edit"); ED.clip=c; ED.info=null; ED.saving=false; ED.confirm=false;
+  const n=parseName(c); $("#h-edit").textContent=n.title; $("#edSub").textContent=`${n.kind}, ${c.when}`;
+  $("#edStatus").textContent=""; $("#edProg").hidden=true; $("#edWarn").hidden=true;
+  edNote("Loading…",true); $("#edTracks").innerHTML=""; $("#tlStrip").innerHTML="";
+  let info;
+  try{ info=await glProbeClip(c.path); }catch(e){ edNote(String(e)); return; }
+  if(ED.clip!==c) return;
+  ED.info=info; ED.dur=info.duration||0; ED.start=0; ED.end=ED.dur; ED.vols={}; ED.mutes={};
+  edV.dataset.stage="orig"; edV.src=mediaURL("file",c.path); edV.poster=mediaURL("thumb",c.path);
+  buildStrip2(); buildTracks(); edRender(); edNote("");
+}
+function edNote(t,busy){ const n=$("#edNote"); n.textContent=t||""; n.hidden=!t; n.toggleAttribute("data-busy",!!busy); }
+edV.addEventListener("error",()=>{ if(!ED.clip) return; if(edV.dataset.stage==="orig"&&MEDIA){ edV.dataset.stage="preview"; edNote("Making a preview copy…",true); edV.src=mediaURL("preview",ED.clip.path);} else edNote("This clip can't play here, but you can still trim it by typing times."); });
+edV.addEventListener("loadedmetadata",()=>{ if(edV.videoWidth===0 && edV.dataset.stage==="orig"){ edV.dispatchEvent(new Event("error")); } });
+edV.addEventListener("loadeddata",()=>edNote(""));
+edV.addEventListener("timeupdate",()=>{ if(ED.selPlay && edV.currentTime>=ED.end-0.03){ edV.pause(); ED.selPlay=false; edV.currentTime=ED.end; } edHead(); });
+edV.addEventListener("seeking",edHead);
+edV.addEventListener("pause",()=>{ if(edV.currentTime<ED.end-0.05) ED.selPlay=false; });
+function buildStrip2(){
+  const st=$("#tlStrip"); st.innerHTML=""; if(!ED.info) return;
+  const n=24, url=mediaURL("strip",ED.clip.path);
+  for(let i=0;i<n;i++){ const sp=document.createElement("span"); st.appendChild(sp); }
+  const img=new Image(); img.onload=()=>layoutStrip(img); img.src=url; ED.stripImg=img;
+}
+function layoutStrip(img){
+  img=img||ED.stripImg; if(!img||!img.naturalWidth) return;
+  const cells=[...$("#tlStrip").children], n=cells.length; if(!n) return;
+  const cw=cells[0].getBoundingClientRect().width, ch=cells[0].getBoundingClientRect().height;
+  const fw=img.naturalWidth/n, fh=img.naturalHeight, scale=ch/fh, w=fw*scale;
+  cells.forEach((c,i)=>{ c.style.backgroundImage=`url("${img.src}")`; c.style.backgroundSize=`${img.naturalWidth*scale}px ${ch}px`; c.style.backgroundPosition=`${-(i*w)+(cw-w)/2}px 0`; });
+}
+window.addEventListener("resize",()=>layoutStrip());
+function buildTracks(){
+  const box=$("#edTracks"), info=ED.info; box.innerHTML="";
+  let rows;
+  if(!info.audio || !info.audio.length){ box.innerHTML='<p class="hint">This clip has no audio.</p>'; $("#edAudioSub").textContent=""; return; }
+  if(info.mixable){
+    rows=info.audio.filter(a=>a.title==="Game audio"||a.title==="Discord"||a.title==="Microphone");
+    $("#edAudioSub").textContent="Track 1 (everything mixed) is rebuilt from these when you save.";
+  } else { rows=info.audio; $("#edAudioSub").textContent="Volume changes apply when you save."; }
+  box.innerHTML=rows.map(a=>`<div class="vol" data-i="${a.index}"><span class="nm" title="${esc(a.title)}">${esc(a.title)}</span>
+    <input type="range" min="0" max="200" step="5" value="100" aria-label="${esc(a.title)} volume"><span class="pc">100%</span>
+    <button class="btn small" aria-pressed="false">Mute</button></div>`).join("");
+  box.querySelectorAll(".vol").forEach(r=>{ const i=+r.dataset.i, rg=r.querySelector("input"), b=r.querySelector("button");
+    const upd=()=>{ rg.style.setProperty("--p",(rg.value/2)+"%"); r.querySelector(".pc").textContent=rg.value+"%"; r.classList.toggle("muted",!!ED.mutes[i]); b.setAttribute("aria-pressed",!!ED.mutes[i]); b.textContent=ED.mutes[i]?"Muted":"Mute"; };
+    rg.addEventListener("input",()=>{ ED.vols[i]=rg.value/100; upd(); }); b.onclick=()=>{ ED.mutes[i]=!ED.mutes[i]; upd(); }; upd(); });
+}
+function pct(t){ return ED.dur? Math.max(0,Math.min(100,t/ED.dur*100)) : 0; }
+function edHead(){ $("#tlHead").style.left=pct(edV.currentTime||0)+"%"; }
+function edRender(){
+  const a=pct(ED.start), b=pct(ED.end);
+  $("#tlStart").style.left=a+"%"; $("#tlEnd").style.left=b+"%";
+  $("#tlDimL").style.width=a+"%"; $("#tlDimR").style.width=(100-b)+"%";
+  $("#tlSel").style.left=a+"%"; $("#tlSel").style.width=(b-a)+"%";
+  $("#tlDur").textContent=tfmt(ED.dur); $("#tlMid").textContent=tfmt(ED.dur/2);
+  if(document.activeElement!==$("#edStartIn")) $("#edStartIn").value=tfmt(ED.start);
+  if(document.activeElement!==$("#edEndIn")) $("#edEndIn").value=tfmt(ED.end);
+  $("#edLen").textContent=tfmt(ED.end-ED.start)+" long";
+  $$("#edMode button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===ED.mode));
+  $$("#edCut button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===ED.cut));
+  $("#edCutHint").textContent= ED.cut==="exact"? "Cuts on the exact frame. The video is re-encoded on your GPU, which takes a few seconds." : "No re-encoding, so no quality loss, but the start snaps to the nearest 2-second mark.";
+  $("#edSave").textContent= ED.saving? "Saving…" : ED.confirm? "Replace original" : (ED.mode==="replace"? "Replace original…" : "Save clip");
+  $("#edSave").setAttribute("aria-disabled", ED.saving || !ED.info);
+  $("#edCancel").hidden=!ED.saving; $("#edBack").setAttribute("aria-disabled",ED.saving);
+  edHead();
+}
+function setTrim(s,e){ const min=0.2; s=Math.max(0,Math.min(s,ED.dur-min)); e=Math.min(ED.dur,Math.max(e,s+min)); ED.start=s; ED.end=e; ED.confirm=false; edRender(); }
+// timeline dragging
+(()=>{ const tl=$("#tl"); let drag=null;
+  const tAt=x=>{ const r=tl.getBoundingClientRect(); return Math.max(0,Math.min(1,(x-r.left)/r.width))*ED.dur; };
+  tl.addEventListener("pointerdown",e=>{ if(!ED.info) return; tl.setPointerCapture(e.pointerId);
+    drag= e.target===$("#tlStart")? "s" : e.target===$("#tlEnd")? "e" : "seek";
+    if(drag==="seek"){ edV.currentTime=tAt(e.clientX); edHead(); } });
+  tl.addEventListener("pointermove",e=>{ if(!drag) return; const t=tAt(e.clientX);
+    if(drag==="s"){ setTrim(t,ED.end); edV.currentTime=ED.start; } else if(drag==="e"){ setTrim(ED.start,t); edV.currentTime=ED.end; } else { edV.currentTime=t; edHead(); } });
+  const up=()=>{ drag=null; }; tl.addEventListener("pointerup",up); tl.addEventListener("pointercancel",up);
+  const keyH=(which)=>e=>{ const step=e.shiftKey?1:0.1; if(e.key==="ArrowLeft"||e.key==="ArrowRight"){ e.preventDefault(); e.stopPropagation(); const d=e.key==="ArrowLeft"?-step:step;
+      if(which==="s") setTrim(ED.start+d,ED.end); else setTrim(ED.start,ED.end+d); } };
+  $("#tlStart").addEventListener("keydown",keyH("s")); $("#tlEnd").addEventListener("keydown",keyH("e"));
+})();
+$("#edSetStart").onclick=()=>setTrim(edV.currentTime||0,ED.end);
+$("#edSetEnd").onclick=()=>setTrim(ED.start,edV.currentTime||0);
+$("#edResetTrim").onclick=()=>setTrim(0,ED.dur);
+$("#edPlaySel").onclick=()=>{ edV.currentTime=ED.start; ED.selPlay=true; edV.play().catch(()=>{}); };
+$("#edStartIn").addEventListener("change",e=>{ const v=tparse(e.target.value); if(isNaN(v)){ flash("Type a time like 1:05.5",true); edRender(); } else setTrim(v,ED.end); });
+$("#edEndIn").addEventListener("change",e=>{ const v=tparse(e.target.value); if(isNaN(v)){ flash("Type a time like 1:05.5",true); edRender(); } else setTrim(ED.start,v); });
+$("#edMode").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b&&!ED.saving){ ED.mode=b.dataset.v; ED.confirm=false; $("#edWarn").hidden=true; edRender(); } });
+$("#edCut").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b&&!ED.saving){ ED.cut=b.dataset.v; edRender(); } });
+$("#edBack").onclick=()=>{ if(ED.saving) return; edV.pause(); go("home"); };
+$("#edCancel").onclick=()=>glEditCancel();
+$("#edSave").onclick=async()=>{
+  if(ED.saving||!ED.info) return;
+  if(ED.mode==="replace" && !ED.confirm){ ED.confirm=true; const w=$("#edWarn"); w.textContent="This overwrites the original clip and can't be undone. Click Replace original again to confirm."; w.hidden=false; edRender(); return; }
+  const tracks=Object.keys({...ED.vols,...ED.mutes}).map(k=>({index:+k, volume:ED.vols[k]??1, mute:!!ED.mutes[k]}));
+  const spec={path:ED.clip.path,start:ED.start,end:ED.end,exact:ED.cut==="exact",replace:ED.mode==="replace",tracks};
+  ED.saving=true; ED.confirm=false; $("#edWarn").hidden=true; $("#edProg").hidden=false; $("#edProg i").style.width="0%"; $("#edStatus").textContent="Starting…"; edRender();
+  edV.pause();
+  if(spec.replace){ edV.removeAttribute("src"); edV.load(); } // release the file so it can be replaced
+  try{ await glEditSave(spec); }catch(e){ window.__glEditDone({ok:false,error:String(e)}); }
+};
+window.__glEditProgress=p=>{ $("#edProg i").style.width=Math.round(p*100)+"%"; $("#edStatus").textContent=`Saving… ${Math.round(p*100)}%`; };
+window.__glEditDone=r=>{
+  ED.saving=false; edRender();
+  if(r.ok){ $("#edProg i").style.width="100%"; const name=r.path.split(/[\\/]/).pop(); $("#edStatus").textContent="Saved as "+name; flash("Saved "+name);
+    const c=(ST.clips||[]).find(k=>k.path===r.path) || {path:r.path,name,kind:ED.clip.kind,sizeMB:0,when:"just now"};
+    picked=true; setTimeout(()=>{ go("home"); const fresh=(ST.clips||[]).find(k=>k.path===r.path)||c; showClip(fresh); },700);
+  } else { $("#edProg").hidden=true; $("#edStatus").textContent= r.canceled? "Canceled. Nothing was saved." : ""; if(!r.canceled) flash(r.error||"Couldn't save the edit",true);
+    if(ED.mode==="replace"&&ED.clip){ edV.src=mediaURL(edV.dataset.stage==="preview"?"preview":"file",ED.clip.path); } }
+};
+document.addEventListener("keydown",e=>{
+  if(!$("#p-edit").classList.contains("on") || hkListen) return;
+  const tag=(e.target.tagName||"").toLowerCase(); if(tag==="input"||tag==="select"||tag==="textarea") return;
+  const fps=(ED.info&&ED.info.fps)||60;
+  if(e.key===" "){ if(tag==="button") return; e.preventDefault(); if(edV.paused){ ED.selPlay=false; edV.play().catch(()=>{}); } else edV.pause(); }
+  else if(e.key==="i"||e.key==="I"){ setTrim(edV.currentTime||0,ED.end); }
+  else if(e.key==="o"||e.key==="O"){ setTrim(ED.start,edV.currentTime||0); }
+  else if(e.key==="ArrowLeft"||e.key==="ArrowRight"){ if(e.target.classList&&e.target.classList.contains("tl-h")) return; e.preventDefault(); edV.currentTime=Math.max(0,Math.min(ED.dur,(edV.currentTime||0)+(e.key==="ArrowLeft"?-1:1)*(e.shiftKey?5:1))); }
+  else if(e.key===","||e.key==="."){ e.preventDefault(); edV.pause(); edV.currentTime=Math.max(0,(edV.currentTime||0)+(e.key===","?-1:1)/fps); }
+});
+
+/* ---------- sharing ---------- */
+const DISCORD_ICON=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 5.3A16.6 16.6 0 0 0 15.5 4l-.5 1a15.3 15.3 0 0 0-6 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C1.8 9.2 1.1 13 1.5 16.8a16.7 16.7 0 0 0 5 2.5l1.1-1.7c-.6-.2-1.2-.5-1.7-.8l.4-.3a11.9 11.9 0 0 0 11.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.7a16.6 16.6 0 0 0 5-2.5c.5-4.4-.8-8.2-2.9-11.5zM8.7 14.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>`;
+function renderHooks(){
+  const list=S.webhooks||[], box=$("#hooks");
+  box.innerHTML = list.length? list.map((w,i)=>`<div class="hook">${DISCORD_ICON}<div style="min-width:0"><b>${esc(w.name)}</b><span>Discord webhook</span></div>
+      <button class="btn small" data-rm="${i}">Remove</button></div>`).join("") : '<p class="hint">No channels yet.</p>';
+}
+$("#hooks").addEventListener("click",e=>{ const b=e.target.closest("[data-rm]"); if(!b) return; const l=[...(S.webhooks||[])]; const w=l.splice(+b.dataset.rm,1)[0]; setK("webhooks",l); flash("Removed "+w.name); });
+let hookPending=null;
+$("#hookAdd").onclick=()=>{
+  const url=$("#hookURL").value.trim(); if(!url){ $("#hookMsg").textContent="Paste the webhook link first."; return; }
+  if((S.webhooks||[]).some(w=>w.url===url.replace(/[?#].*$/,"").replace(/\/+$/,""))){ $("#hookMsg").textContent="That channel is already added."; return; }
+  hookPending={name:$("#hookName").value.trim()}; $("#hookAdd").setAttribute("aria-disabled","true"); $("#hookMsg").textContent="Checking with Discord…"; glWebhookCheck(url);
+};
+window.__glWebhookChecked=r=>{
+  $("#hookAdd").removeAttribute("aria-disabled");
+  if(!r.ok){ $("#hookMsg").textContent=r.error; return; }
+  const w=r.webhook; w.name=(hookPending&&hookPending.name)||r.name||"Discord channel";
+  setK("webhooks",[...(S.webhooks||[]),w]); $("#hookURL").value=""; $("#hookName").value=""; $("#hookMsg").textContent=`Added ${w.name}. Try it with Share to Discord on any clip.`;
+};
+let SH={clip:null,busy:false,plan:null,mode:"copy",size:20,url:"",done:false};
+const shDlg=$("#shareDlg");
+function shHooks(){ return S.webhooks||[]; }
+function shRender(){
+  const m=SH.mode, hooks=shHooks(), noHooks = m==="post" && !hooks.length;
+  $$("#shMode button").forEach(b=>{ b.setAttribute("aria-pressed",b.dataset.v===m); b.setAttribute("aria-selected",b.dataset.v===m); b.disabled=SH.busy; });
+  $$("#shSize button").forEach(b=>{ b.setAttribute("aria-pressed",+b.dataset.v===SH.size); b.disabled=SH.busy; });
+  $("#shCopy").hidden = m!=="copy"; $("#shPostBox").hidden = m!=="post" || noHooks; $("#shEmpty").hidden = !noHooks;
+  $("#shPlan").hidden = noHooks;
+  $("#shSetup").hidden = !noHooks || SH.busy;
+  $("#shGo").hidden = noHooks || SH.busy || SH.done; $("#shGo").textContent = m==="copy"? "Copy" : "Post";
+  $("#shGo").setAttribute("aria-disabled", String(!SH.plan || !!SH.plan.tooLong));
+  $("#shCancel").hidden = !SH.busy; $("#shClose").hidden = SH.busy;
+  $("#shOpen").hidden = !(SH.done && SH.mode==="post" && SH.url);
+  $("#shEditor").hidden = !(SH.plan && SH.plan.tooLong) || SH.busy;
+  $("#shHook").disabled = $("#shMsg").disabled = SH.busy;
+}
+async function shPlan(){
+  const c=SH.clip, key=SH.mode+SH.size; SH.plan=null; SH.done=false; $("#shPlan").textContent="Checking the clip…"; $("#shProg").hidden=true; $("#shStatus").textContent=""; shRender();
+  if(SH.mode==="post" && !shHooks().length) return;
+  try{ const p=await glSharePlan(c.path, SH.mode==="copy"? SH.size : 0); if(SH.clip!==c || key!==SH.mode+SH.size) return;
+    SH.plan=p; $("#shPlan").textContent=p.summary;
+  }catch(e){ $("#shPlan").textContent=String(e); }
+  shRender();
+}
+async function openShare(c){
+  $("#player").pause();
+  SH={clip:c,busy:false,plan:null,mode:S.shareMode||"copy",size:S.clipboardMB||20,url:"",done:false};
+  const n=parseName(c);
+  $("#shThumb").innerHTML=`<img alt="" src="${esc(mediaURL("thumb",c.path))}" onerror="this.remove()">`;
+  $("#shName").textContent=n.title; $("#shMeta").textContent=`${n.kind}, ${c.when}, ${size(c.sizeMB)}`;
+  const hooks=shHooks();
+  $("#shHook").innerHTML=hooks.map((w,i)=>`<option value="${i}">${esc(w.name)}</option>`).join("");
+  if(hooks.length) $("#shHook").value=String(Math.min(+(localStorageGet("shareHook")||0),hooks.length-1));
+  $("#shMsg").value = S.shareGameName && n.title && n.title!=="Desktop" ? `**${n.title}**` : "";
+  if(!shDlg.open) shDlg.showModal();
+  shRender(); shPlan();
+}
+function localStorageGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function localStorageSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+$("#shMode").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b||SH.busy||b.dataset.v===SH.mode) return; SH.mode=b.dataset.v; setK("shareMode",SH.mode); shPlan(); });
+$("#shSize").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b||SH.busy||+b.dataset.v===SH.size) return; SH.size=+b.dataset.v; setK("clipboardMB",SH.size); shPlan(); });
+$("#shGo").onclick=async()=>{
+  if(SH.busy||!SH.clip||$("#shGo").getAttribute("aria-disabled")==="true") return;
+  SH.busy=true; SH.done=false; $("#shProg").hidden=false; $("#shProg i").style.width="0%";
+  const prep = SH.plan && (SH.plan.encode||SH.plan.remux);
+  $("#shStatus").textContent = prep? "Preparing… 0%" : (SH.mode==="copy"? "Copying…" : "Uploading… 0%"); shRender();
+  try{
+    if(SH.mode==="copy") await glCopyClip(SH.clip.path, SH.size);
+    else { const idx=+$("#shHook").value; localStorageSet("shareHook",idx); await glShare(SH.clip.path, idx, $("#shMsg").value); }
+  }catch(e){ (SH.mode==="copy"? window.__glCopyDone : window.__glShareDone)({ok:false,error:String(e)}); }
+};
+window.__glShareProgress=({stage,p})=>{ const prep=SH.plan&&(SH.plan.encode||SH.plan.remux);
+  const total = SH.mode==="copy"? p : prep? (stage==="prepare"? p*0.7 : 0.7+p*0.3) : p;
+  $("#shProg i").style.width=Math.round(total*100)+"%";
+  $("#shStatus").textContent=(stage==="prepare"?"Preparing… ":"Uploading… ")+Math.round(p*100)+"%"; };
+function shFinish(r, okText){
+  SH.busy=false;
+  if(r.ok){ SH.done=true; $("#shProg i").style.width="100%"; $("#shStatus").textContent=okText; }
+  else { $("#shProg").hidden=true; $("#shStatus").textContent= r.canceled? "Canceled." : ""; if(!r.canceled) flash(r.error||"Couldn't share the clip",true); }
+  shRender();
+}
+window.__glShareDone=r=>{ SH.url=r.messageUrl||""; shFinish(r, `Posted to ${r.channel||"Discord"}${r.sizeMB?` (${r.sizeMB.toFixed(1)} MB)`:""}.`); };
+window.__glCopyDone=r=>{ shFinish(r, `Copied${r.sizeMB?` (${r.sizeMB.toFixed(1)} MB)`:""}. Press Ctrl+V in any Discord chat.`); };
+$("#shCancel").onclick=()=>glShareCancel();
+$("#shClose").onclick=()=>shDlg.close();
+$("#shOpen").onclick=()=>{ if(SH.url) glOpenURL(SH.url); };
+$("#shSetup").onclick=()=>{ shDlg.close(); go("share"); setTimeout(()=>$("#hookURL").focus(),50); };
+$("#shEditor").onclick=()=>{ const c=SH.clip; shDlg.close(); openEditor(c); };
+shDlg.addEventListener("cancel",e=>{ if(SH.busy) e.preventDefault(); });
+
+/* ---------- accent color ---------- */
+const PRESETS=[["NVIDIA green","#76B900"],["Lime","#A3E635"],["Teal","#14B8A6"],["Cyan","#06B6D4"],["Blue","#3B82F6"],["Indigo","#6366F1"],["Purple","#A855F7"],["Pink","#EC4899"],["Red","#EF4444"],["Orange","#F97316"],["Gold","#EAB308"],["Silver","#B8C0C8"]];
+function hexToRgb(h){ const v=parseInt(h.slice(1),16); return [v>>16&255,v>>8&255,v&255]; }
+function rgbToHex(r,g,b){ return "#"+[r,g,b].map(x=>Math.round(Math.max(0,Math.min(255,x))).toString(16).padStart(2,"0")).join("").toUpperCase(); }
+function rgbToHsl(r,g,b){ r/=255;g/=255;b/=255; const mx=Math.max(r,g,b),mn=Math.min(r,g,b); let h=0,s=0,l=(mx+mn)/2;
+  if(mx!==mn){ const d=mx-mn; s=l>.5? d/(2-mx-mn) : d/(mx+mn); h= mx===r? (g-b)/d+(g<b?6:0) : mx===g? (b-r)/d+2 : (r-g)/d+4; h*=60; } return [h,s,l]; }
+function hslToHex(h,s,l){ const k=n=>(n+h/30)%12, a=s*Math.min(l,1-l), f=n=>l-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1)); return rgbToHex(255*f(0),255*f(8),255*f(4)); }
+function lum(hex){ const c=hexToRgb(hex).map(v=>{v/=255; return v<=.03928? v/12.92 : Math.pow((v+.055)/1.055,2.4);}); return .2126*c[0]+.7152*c[1]+.0722*c[2]; }
+function contrast(a,b){ const x=lum(a)+.05, y=lum(b)+.05; return Math.max(x,y)/Math.min(x,y); }
+function applyAccent(hex){
+  if(!/^#[0-9A-Fa-f]{6}$/.test(hex||"")) hex="#76B900";
+  const [h,s,l]=rgbToHsl(...hexToRgb(hex)); const [r,g,b]=hexToRgb(hex), st=document.documentElement.style;
+  // text-on-dark version: lighten until it reads clearly on the panels
+  let hl=Math.max(l,.5), hi=hslToHex(h,s,hl); while(contrast(hi,"#121415")<6 && hl<.92){ hl+=.03; hi=hslToHex(h,s,hl); }
+  const ink = contrast(hex,"#0B0F05")>=contrast(hex,"#FFFFFF")? "#0B0F05" : "#FFFFFF";
+  st.setProperty("--green",hex); st.setProperty("--green-hi",hi); st.setProperty("--green-ink",ink);
+  st.setProperty("--green-wash",`rgba(${r},${g},${b},.13)`); st.setProperty("--green-ring",`rgba(${r},${g},${b},.24)`);
+  // buffer bar: keep it bright enough to read against the dark track
+  let bl=l, bar=hex; while(contrast(bar,"#1E2224")<3 && bl<.85){ bl+=.03; bar=hslToHex(h,s,bl); }
+  st.setProperty("--green-bar",bar);
+  st.setProperty("--green-old",hslToHex(h,s*.8,Math.max(.2,bl*.58)));
+}
+function renderAccent(){
+  const a=(S.accent||"#76B900").toUpperCase(); applyAccent(a);
+  $$("#swatches .swatch").forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===a));
+  const [h]=rgbToHsl(...hexToRgb(a)); const hue=$("#hue"); if(document.activeElement!==hue) hue.value=Math.round(h);
+  $("#colorPick").value=a.toLowerCase(); if(document.activeElement!==$("#hexIn")) $("#hexIn").value=a;
+}
+$("#swatches").innerHTML=PRESETS.map(([n,h])=>`<button class="swatch" data-v="${h}" style="background:${h}" aria-label="${n}" title="${n}"></button>`).join("");
+$("#swatches").addEventListener("click",e=>{ const b=e.target.closest(".swatch"); if(b) setK("accent",b.dataset.v); });
+$("#hue").addEventListener("input",e=>{ const [,s0,l0]=rgbToHsl(...hexToRgb(S.accent||"#76B900")); setK("accent",hslToHex(+e.target.value, Math.max(s0,.65), Math.min(.6,Math.max(.42,l0)))); });
+$("#colorPick").addEventListener("input",e=>setK("accent",e.target.value.toUpperCase()));
+$("#hexIn").addEventListener("change",e=>{ let v=e.target.value.trim(); if(!v.startsWith("#")) v="#"+v; if(/^#[0-9A-Fa-f]{6}$/.test(v)) setK("accent",v.toUpperCase()); else { flash("Use a 6-digit color code like #76B900",true); renderAccent(); } });
+$("#resetAccent").onclick=()=>setK("accent","#76B900");
+window.__glNvenc=n=>{ NV=n; const ok=n.hevc||n.h264||n.av1;
+  $("#nvencLine").innerHTML = !n.checked? '<span class="dot"></span>Checking NVENC' : ok? `<span class="dot ok"></span>NVENC ready: ${["h264","hevc","av1"].filter(c=>n[c]).map(c=>({h264:"H.264",hevc:"HEVC",av1:"AV1"})[c]).join(", ")}` : '<span class="dot bad"></span>NVENC not available';
+  render(); };
+window.__glFlash=(m,w)=>flash(m,w);
+window.__glSettings=s=>{ S=s; render(); renderStatus(ST); };
+
+(async function init(){
+  buildStrip();
+  const r=await glGetInit();
+  S=r.settings; MEDIA=r.mediaBase||""; MONS=r.monitors||[]; WINS=r.windows||[]; OUTS=r.outputs||[]; INS=r.inputs||[];
+  try{ glUpdateState().then(renderUpdate); }catch(e){}
+  $("#gpuName").textContent=r.gpu||"GPU"; $("#ver").textContent="ReKapture "+(r.version||"")+(r.portable?" (portable)":"");
+  if(r.portable) $("#whereNote").innerHTML="<b>Where things are.</b> This is the portable version: settings and the log are kept in the Data folder next to ReKapture.exe, so you can move the whole folder. If something goes wrong, the log file says why.";
+  if(r.hotkeyErrors) $("#hkErr").textContent=r.hotkeyErrors;
+  renderSources(); render(); renderStatus(r.status||{}); if(r.nvenc) window.__glNvenc(r.nvenc);
+})();
+</script>
+</body>
+</html>
