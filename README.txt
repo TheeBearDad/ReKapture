@@ -22,7 +22,7 @@ INSTALL
 There are two ways to use ReKapture. Pick one.
 
 Installer (recommended)
-1. Run ReKapture-Setup-2.5.0.exe.
+1. Run ReKapture-Setup-2.5.1.exe.
 2. Windows may show "Windows protected your PC" because ReKapture isn't
    code-signed. Click "More info", then "Run anyway".
 3. Follow the steps. ReKapture installs to C:\Program Files (x86)\ReKapture

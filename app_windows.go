@@ -28,7 +28,7 @@ import (
 //go:embed ui/index.html
 var indexHTML string
 
-const appVersion = "2.5.0"
+const appVersion = "2.5.1"
 
 const (
 	wmClose     = 0x0010
@@ -61,7 +61,8 @@ type App struct {
 	trayOK         bool
 	taskbarCreated uintptr
 	oldProc        uintptr
-	pending        int32
+	status         *coalescer // delivers status to the window (see coalesce.go)
+	statusOnce     sync.Once
 	lastSt         atomic.Value
 	quitting       int32
 	hidOnce        bool
@@ -480,14 +481,19 @@ func (a *App) notify(kind, title, msg string) {
 
 func (a *App) onStatus(st Status) {
 	a.lastSt.Store(st)
-	if atomic.CompareAndSwapInt32(&a.pending, 0, 1) {
-		a.wv.Dispatch(func() {
-			atomic.StoreInt32(&a.pending, 0)
-			if v, ok := a.lastSt.Load().(Status); ok {
-				a.pushStatus(v)
-			}
-		})
-	}
+	a.statusOnce.Do(func() {
+		a.status = &coalescer{
+			dispatch: a.wv.Dispatch,
+			deliver: func() {
+				if v, ok := a.lastSt.Load().(Status); ok {
+					a.pushStatus(v)
+				}
+			},
+			now:        time.Now,
+			retryAfter: time.Second,
+		}
+	})
+	a.status.Trigger()
 }
 
 func (a *App) pushStatus(st Status) {
