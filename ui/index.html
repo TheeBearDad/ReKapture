@@ -63,7 +63,6 @@ h2{font:600 16px/1.2 var(--fc);margin:0 0 3px;letter-spacing:.2px}
 .strip{margin:20px 0 10px;height:44px;display:flex;gap:3px;align-items:stretch}
 .strip span{flex:1;background:#1E2224;transform-origin:bottom;transition:background .25s}
 .strip span.f{background:var(--green-bar)}
-.strip span.f.old{background:var(--green-old)}
 .strip.off span{background:#16191B}
 .strip-legend{display:flex;justify-content:space-between;color:var(--muted);font:13px var(--fc)}
 .strip-legend b{color:var(--text);font-weight:600}
@@ -208,7 +207,7 @@ input[type=range].hue::-webkit-slider-thumb{border-color:#fff;background:var(--g
 #hexIn{width:110px;font-variant-numeric:tabular-nums;text-transform:uppercase}
 .sample{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 18px;background:var(--panel)}
 .sample .mini{display:flex;gap:3px;height:26px;width:150px}
-.sample .mini span{flex:1;background:var(--green-bar)} .sample .mini span:nth-child(-n+3){background:var(--green-old)} .sample .mini span:nth-child(-n+1){background:#1E2224}
+.sample .mini span{flex:1;background:var(--green-bar)} .sample .mini span:nth-child(-n+2){background:#1E2224}
 .link{all:unset;cursor:pointer;color:var(--green-hi);font-size:13.5px}
 .link:hover{text-decoration:underline}
 .link:focus-visible{outline:2px solid var(--green);outline-offset:2px}
@@ -924,7 +923,7 @@ function renderStatus(st){
   const total=(S&&S.replaySeconds)||120, have=Math.min(ST.bufferSeconds||0,total);
   const strip=$("#strip"), cells=[...strip.children], n=cells.length, filled=ST.replayOn&&ST.state!=="error"? Math.round(have/total*n) : 0;
   strip.classList.toggle("off",!ST.replayOn);
-  cells.forEach((c,i)=>{ c.classList.toggle("f", i>=n-filled); c.classList.toggle("old", i>=n-filled && i<n-filled+Math.round(filled*.15)); });
+  cells.forEach((c,i)=>c.classList.toggle("f", i>=n-filled));
   if(!ST.replayOn){ $("#bufLeft").textContent = ST.recording? "Instant Replay is off. Recording only." : "Instant Replay is off"; $("#bufRight").textContent=""; }
   else if(state==="standby"){ $("#bufLeft").textContent="Instant Replay starts when you open a game"; $("#bufRight").textContent=""; }
   else if(state==="buffering"||state==="recording"){ $("#bufLeft").innerHTML=`<b>${dur(have)}</b> of ${dur(total)} ready to save`; $("#bufRight").textContent=ST.game? "Following "+ST.game : (ST.source||""); }

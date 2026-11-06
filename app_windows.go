@@ -28,7 +28,7 @@ import (
 //go:embed ui/index.html
 var indexHTML string
 
-const appVersion = "2.5.1"
+const appVersion = "2.5.2"
 
 const (
 	wmClose     = 0x0010
