@@ -28,7 +28,7 @@ import (
 //go:embed ui/index.html
 var indexHTML string
 
-const appVersion = "2.5.2"
+const appVersion = "2.6.0"
 
 const (
 	wmClose     = 0x0010
@@ -467,8 +467,17 @@ func (a *App) trayMenu() {
 
 func (a *App) notify(kind, title, msg string) {
 	a.wv.Dispatch(func() {
-		if a.settings.OverlayToasts {
-			ov.Toast(kind, title, msg)
+		s := a.settings
+		if s.OverlayToasts && s.OverlayStyle == "icons" {
+			if icon, skip := IndicatorFor(kind, title); skip {
+				if icon != "" {
+					a.showIcon(icon)
+				}
+				return
+			}
+		}
+		if s.OverlayToasts {
+			ov.ToastFor(kind, title, msg, IndicatorMillis(s, kind))
 		} else if a.visible && kind != "busy" {
 			t := title
 			if msg != "" {
@@ -477,6 +486,17 @@ func (a *App) notify(kind, title, msg string) {
 			a.evalJSON2("__glFlash", t, kind == "warn")
 		}
 	})
+}
+
+// showIcon shows a corner indicator with the user's color, opacity, size
+// and time. Runs on the UI thread.
+func (a *App) showIcon(icon string) {
+	s := a.settings
+	hex, op := s.ReplayIconColor, s.ReplayIconOpacity
+	if icon != IconReplay {
+		hex, op = s.RecDotColor, s.RecDotOpacity
+	}
+	ov.ShowIcon(icon, s.OverlaySize, hex, op, IndicatorMillis(s, "ok"))
 }
 
 func (a *App) onStatus(st Status) {
@@ -848,6 +868,19 @@ func (a *App) bind() {
 	})
 	w.Bind("glUpdateCancel", func() { a.updater.CancelDownload() })
 	w.Bind("glOpenReleases", func() { shellOpen("open", "https://github.com/"+UpdateRepo+"/releases", "") })
+	w.Bind("glPreviewIndicator", func(kind string) {
+		// Show what a notice looks like over the screen, with current settings.
+		a.wv.Dispatch(func() {
+			switch {
+			case a.settings.OverlayStyle == "cards" && kind == IconReplay:
+				ov.ToastFor("ok", "Replay saved", "Example notice", IndicatorMillis(a.settings, "ok"))
+			case a.settings.OverlayStyle == "cards":
+				ov.ToastFor("rec", "Recording started", "Example notice", IndicatorMillis(a.settings, "ok"))
+			case kind == IconReplay || kind == IconRecStart || kind == IconRecStop:
+				a.showIcon(kind)
+			}
+		})
+	})
 	w.Bind("glCaptureTest", func() error {
 		if !a.capTesting.CompareAndSwap(false, true) {
 			return fmt.Errorf("a capture test is already running")

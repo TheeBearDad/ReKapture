@@ -22,7 +22,7 @@ INSTALL
 There are two ways to use ReKapture. Pick one.
 
 Installer (recommended)
-1. Run ReKapture-Setup-2.5.2.exe.
+1. Run ReKapture-Setup-2.6.0.exe.
 2. Windows may show "Windows protected your PC" because ReKapture isn't
    code-signed. Click "More info", then "Run anyway".
 3. Follow the steps. ReKapture installs to C:\Program Files (x86)\ReKapture
@@ -174,8 +174,14 @@ Appearance
   highlights, the window border and in-game notices all follow it.
 
 Overlay
-- Small notices when a clip is saved and a REC timer while recording, in
-  the corner of your choice. They are left out of your recordings.
+- Small icons over your game, in the corner of your choice: a rewind icon
+  when a replay is saved, a dot when recording starts and a stop icon when
+  it ends. Pick their color, opacity and size, and how long they stay up
+  (1, 3 or 5 seconds, or any time from 0.5 to 30). "Show on screen" tries
+  them out. Prefer words? Switch the style to Text notices.
+- Problems (a save that failed, for example) always show a short text
+  notice, and an optional REC timer stays up while you record.
+- None of it is ever in your recordings.
 - The overlay shows over borderless/windowed games. Games in exclusive
   full-screen mode can hide it; recording still works.
 

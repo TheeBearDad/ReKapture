@@ -196,6 +196,13 @@ textarea:focus{border-color:var(--green)}
 .share select{min-width:0;width:100%}
 /* appearance */
 .swatches{display:flex;flex-wrap:wrap;gap:10px}
+.icopt{display:grid;grid-template-columns:76px minmax(0,1fr);gap:16px;align-items:start;padding:14px;border-radius:10px;background:var(--raised);border:1px solid var(--line)}
+.icprev{width:76px;height:76px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(160deg,#3a4652,#1a1f24 60%,#c9b48a)}
+.icprev svg{width:48px;height:48px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.icset{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ichead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.swatches .swatch.pick{display:grid;place-items:center;background:conic-gradient(#e5484d,#f2a93b,#76b900,#0a72f0,#a463f2,#e5484d)}
+.swatches .swatch.pick input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .swatch{all:unset;cursor:pointer;width:34px;height:34px;border-radius:8px;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
 .swatch[aria-pressed=true]::after{content:"";position:absolute;inset:-4px;border-radius:11px;border:2px solid var(--text)}
 .swatch:focus-visible{outline:2px solid var(--text);outline-offset:3px}
@@ -494,11 +501,36 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
         </div>
       </div>
       <div class="group">
-        <div><h2>Overlay</h2><p class="sub">Small notices drawn over your game.</p></div>
+        <div><h2>Overlay</h2><p class="sub">What shows over your game when you save a replay or start and stop recording. It's never in your clips.</p></div>
         <div class="ctl">
-          <div class="toggle-row"><div>Show a notice when a clip is saved</div><button class="switch" role="switch" data-k="overlayToasts" aria-label="Show a notice when a clip is saved"></button></div>
-          <div class="toggle-row"><div>Show a recording timer while recording</div><button class="switch" role="switch" data-k="overlayRec" aria-label="Show a recording timer"></button></div>
-          <div class="row"><label class="l">Screen corner</label><div class="corners" data-k="overlayCorner"><button data-v="tl" aria-label="Top left"></button><button data-v="tr" aria-label="Top right"></button><button data-v="bl" aria-label="Bottom left"></button><button data-v="br" aria-label="Bottom right"></button></div></div>
+          <div class="toggle-row"><div>Show notices over games</div><button class="switch" role="switch" data-k="overlayToasts" aria-label="Show notices over games"></button></div>
+          <div class="row" data-show="s.overlayToasts"><label class="l">Style</label><div class="seg" data-k="overlayStyle"><button data-v="icons">Small icons</button><button data-v="cards">Text notices</button></div></div>
+          <p class="hint" data-show="s.overlayToasts&&s.overlayStyle==='icons'">A rewind icon when a replay is saved, a dot when recording starts, and a stop icon when it ends. Problems still show a short text notice.</p>
+          <div class="row" data-show="s.overlayToasts"><label class="l">Screen corner</label><div class="corners" data-k="overlayCorner"><button data-v="tl" aria-label="Top left"></button><button data-v="tr" aria-label="Top right"></button><button data-v="bl" aria-label="Bottom left"></button><button data-v="br" aria-label="Bottom right"></button></div></div>
+          <div class="row" data-show="s.overlayToasts"><label class="l">Show for</label>
+            <div class="seg" id="ovSecs" role="group" aria-label="How long notices stay on screen"><button data-sec="1">1 second</button><button data-sec="3">3 seconds</button><button data-sec="5">5 seconds</button><button data-sec="custom">Custom</button></div>
+            <span id="ovSecsCustom" hidden><input type="number" id="ovSecsIn" min="0.5" max="30" step="0.5" aria-label="Seconds on screen"><span class="hint">seconds</span></span></div>
+          <div class="row" data-show="s.overlayToasts&&s.overlayStyle==='icons'"><label class="l">Icon size</label><div class="seg" data-k="overlaySize"><button data-v="small">Small</button><button data-v="medium">Medium</button><button data-v="large">Large</button></div></div>
+
+          <div class="icopt" data-show="s.overlayToasts&&s.overlayStyle==='icons'">
+            <div class="icprev" id="prevReplay" aria-hidden="true"></div>
+            <div class="icset">
+              <div class="ichead"><b>Replay saved</b><button class="btn small" data-preview="replay">Show on screen</button></div>
+              <div class="swatches" data-color="replayIconColor" role="group" aria-label="Replay icon color"></div>
+              <div class="row"><label class="l">Opacity</label><input type="range" data-k="replayIconOpacity" min="10" max="100" step="5" aria-label="Replay icon opacity"><span class="val" id="v-ropac"></span></div>
+            </div>
+          </div>
+          <div class="icopt" data-show="s.overlayToasts&&s.overlayStyle==='icons'">
+            <div class="icprev" id="prevRec" aria-hidden="true"></div>
+            <div class="icset">
+              <div class="ichead"><b>Recording started and stopped</b><button class="btn small" data-preview="rec-start">Show on screen</button></div>
+              <div class="swatches" data-color="recDotColor" role="group" aria-label="Recording dot color"></div>
+              <div class="row"><label class="l">Opacity</label><input type="range" data-k="recDotOpacity" min="10" max="100" step="5" aria-label="Recording dot opacity"><span class="val" id="v-dopac"></span></div>
+            </div>
+          </div>
+          <div class="row" data-show="s.overlayToasts&&s.overlayStyle==='cards'"><button class="btn small" data-preview="replay">Show an example on screen</button></div>
+
+          <div class="toggle-row"><div>Show a recording timer while recording<p class="hint">Stays up for the whole recording.</p></div><button class="switch" role="switch" data-k="overlayRec" aria-label="Show a recording timer"></button></div>
         </div>
       </div>
       <div class="group">
@@ -684,7 +716,8 @@ const VK={8:"Backspace",9:"Tab",13:"Enter",19:"Pause",32:"Space",33:"PgUp",34:"P
 
 /* ---------- mock for previewing in a browser ---------- */
 if(!native){
-  const mk=(o)=>Object.assign({captureMode:"auto",autoTarget:"window",discordAudio:"separate",replayWhen:"always",autoUpdate:true,games:[{exe:"Cyberpunk2077.exe",name:"Cyberpunk 2077",isGame:true},{exe:"cs2.exe",name:"Counter-Strike 2",isGame:true},{exe:"Photos.exe",name:"Photos",isGame:false}],monitorId:"\\\\.\\DISPLAY1",windowExe:"",showCursor:true,resolution:"native",customWidth:1920,customHeight:1080,aspect:"source",aspectFit:"fit",fps:60,codec:"h264",rateControl:"vbr",bitrateMbps:50,cq:23,preset:5,container:"mp4",systemAudio:true,systemDeviceId:"",mic:true,micDeviceId:"",audioTracks:"both",audioKbps:192,replayEnabled:true,replaySeconds:120,outputDir:"C:\\Users\\Tyler\\Videos\\ReKapture",folderPerGame:true,hotkeySave:{mods:5,key:121},hotkeyRecord:{mods:5,key:120},hotkeyToggle:{mods:5,key:88},overlayToasts:true,overlayRec:true,overlayCorner:"tr",startWithWindows:false,startMinimized:false,accent:"#76B900",discordMB:20,shareGameName:true,webhooks:[],clipboardMB:20,shareMode:"copy"},o);
+  window.glPreviewIndicator=async k=>flash("Shown in the "+({tl:"top left",tr:"top right",bl:"bottom left",br:"bottom right"}[S.overlayCorner])+" corner for "+S.overlaySeconds+" s");
+  const mk=(o)=>Object.assign({overlayStyle:"icons",overlaySeconds:3,overlaySize:"medium",replayIconColor:"#76B900",replayIconOpacity:90,recDotColor:"#E5484D",recDotOpacity:90,captureMode:"auto",autoTarget:"window",discordAudio:"separate",replayWhen:"always",autoUpdate:true,games:[{exe:"Cyberpunk2077.exe",name:"Cyberpunk 2077",isGame:true},{exe:"cs2.exe",name:"Counter-Strike 2",isGame:true},{exe:"Photos.exe",name:"Photos",isGame:false}],monitorId:"\\\\.\\DISPLAY1",windowExe:"",showCursor:true,resolution:"native",customWidth:1920,customHeight:1080,aspect:"source",aspectFit:"fit",fps:60,codec:"h264",rateControl:"vbr",bitrateMbps:50,cq:23,preset:5,container:"mp4",systemAudio:true,systemDeviceId:"",mic:true,micDeviceId:"",audioTracks:"both",audioKbps:192,replayEnabled:true,replaySeconds:120,outputDir:"C:\\Users\\Tyler\\Videos\\ReKapture",folderPerGame:true,hotkeySave:{mods:5,key:121},hotkeyRecord:{mods:5,key:120},hotkeyToggle:{mods:5,key:88},overlayToasts:true,overlayRec:true,overlayCorner:"tr",startWithWindows:false,startMinimized:false,accent:"#76B900",discordMB:20,shareGameName:true,webhooks:[],clipboardMB:20,shareMode:"copy"},o);
   const mock={settings:mk({}),gpu:"NVIDIA GeForce RTX 5080",version:"1.0.0",nvenc:{checked:true,h264:true,hevc:true,av1:true},
     monitors:[{id:"\\\\.\\DISPLAY1",name:"Display 1 — 2560×1440 @ 240 Hz (main)",width:2560,height:1440},{id:"\\\\.\\DISPLAY2",name:"Display 2 — 1920×1080 @ 60 Hz",width:1920,height:1080}],
     windows:[{exe:"cs2.exe",title:"Counter-Strike 2"},{exe:"FortniteClient-Win64-Shipping.exe",title:"Fortnite"}],
@@ -772,6 +805,31 @@ function renderGames(){
       <button class="btn small" data-grm="${i}" aria-label="Remove ${esc(g.name)}">Remove</button></div>`).join("")
     : '<p class="hint">No games yet. Start one and it appears here.</p>';
 }
+const ICON_COLORS={replayIconColor:[["#76B900","Green"],["#E5484D","Red"],["#0A72F0","Blue"],["#F2A93B","Orange"],["#F2F4F5","White"]],
+  recDotColor:[["#E5484D","Red"],["#F2A93B","Orange"],["#76B900","Green"],["#0A72F0","Blue"],["#F2F4F5","White"]]};
+function iconSVG(kind,hex,op){
+  const m=(c,t,to)=>{ const n=parseInt(c.slice(1),16),r=n>>16,g=n>>8&255,b=n&255,f=x=>Math.round(x+(to-x)*t); return `rgb(${f(r)},${f(g)},${f(b)})`; };
+  const o=(op||100)/100;
+  if(kind==="replay") return `<svg viewBox="0 0 100 100" style="opacity:${o}"><circle cx="50" cy="54" r="45" fill="#000" opacity=".35"/><circle cx="50" cy="50" r="45" fill="${hex}"/>
+    <g fill="${m(hex,.35,0)}" transform="translate(2.2,4)"><path d="M19.4 50 46.4 26.6v46.8z"/><path d="M46.4 50 73.4 26.6v46.8z"/></g>
+    <g fill="${m(hex,.68,255)}"><path d="M19.4 50 46.4 26.6v46.8z"/><path d="M46.4 50 73.4 26.6v46.8z"/></g></svg>`;
+  return `<svg viewBox="0 0 100 100" style="opacity:${o}"><circle cx="50" cy="54" r="45" fill="#000" opacity=".35"/><circle cx="50" cy="50" r="45" fill="#fff" opacity=".92"/><circle cx="50" cy="50" r="38" fill="${hex}"/></svg>`;
+}
+function renderOverlayOpts(){
+  $$("[data-color]").forEach(box=>{
+    const k=box.dataset.color, cur=(S[k]||"").toUpperCase(), list=ICON_COLORS[k], known=list.some(c=>c[0]===cur);
+    box.innerHTML=list.map(([h,n])=>`<button class="swatch" style="background:${h}" data-hex="${h}" aria-label="${n}" aria-pressed="${h===cur}"></button>`).join("")
+      +`<label class="swatch pick" aria-pressed="${!known}" title="Custom color"><input type="color" value="${cur.toLowerCase()}" aria-label="Custom color"></label>`;
+  });
+  $("#prevReplay").innerHTML=iconSVG("replay",S.replayIconColor,S.replayIconOpacity);
+  $("#prevRec").innerHTML=iconSVG("rec",S.recDotColor,S.recDotOpacity);
+  $("#v-ropac").textContent=S.replayIconOpacity+"%"; $("#v-dopac").textContent=S.recDotOpacity+"%";
+  const secs=S.overlaySeconds, preset=[1,3,5].includes(secs);
+  $$("#ovSecs button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.sec==="custom"? String(!preset||OVCUSTOM) : String(preset&&!OVCUSTOM&&+b.dataset.sec===secs)));
+  $("#ovSecsCustom").hidden=preset&&!OVCUSTOM;
+  if(document.activeElement!==$("#ovSecsIn")) $("#ovSecsIn").value=secs;
+}
+let OVCUSTOM=false;
 function render(){
   if(!S) return;
   $$("[data-k]").forEach(el=>{
@@ -795,6 +853,7 @@ function render(){
   const dh={separate:"Discord gets its own track, and game audio leaves it out. The track is silent while Discord is closed.",mix:"Discord is part of the game audio, like everything else your PC plays.",exclude:"Discord isn't recorded at all, but you still hear it."}[S.discordAudio];
   $("#discordHint").textContent = S.discordAudio==="separate"&&S.audioTracks==="mixed"? "You chose one mixed track under Audio tracks, so Discord is mixed in. Pick Mixed + separate there to give it its own track." : dh+" Needs Windows 10 version 2004 or newer.";
   renderGames();
+  renderOverlayOpts();
   let idx=REPLAY_STOPS.indexOf(S.replaySeconds); if(idx<0) idx=REPLAY_STOPS.findIndex(x=>x>=S.replaySeconds); if(idx<0) idx=REPLAY_STOPS.length-1;
   const rl=$("#replayLen"); rl.value=idx; rl.style.setProperty("--p",(idx/13*100)+"%"); $("#v-replay").textContent=dur(S.replaySeconds);
   const per = S.rateControl==="cq"? S.bitrateMbps*1.0 : S.bitrateMbps;
@@ -830,6 +889,14 @@ $$("input[type=range][data-k]").forEach(el=>el.addEventListener("input",()=>setK
 $("#replayLen").addEventListener("input",e=>setK("replaySeconds",REPLAY_STOPS[+e.target.value]));
 
 $("#monAutoSel").addEventListener("change",e=>setK("monitorId",e.target.value));
+$$("[data-color]").forEach(box=>{
+  box.addEventListener("click",e=>{ const b=e.target.closest("button[data-hex]"); if(b) setK(box.dataset.color,b.dataset.hex); });
+  box.addEventListener("input",e=>{ if(e.target.type==="color") setK(box.dataset.color,e.target.value.toUpperCase()); });
+});
+$("#ovSecs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.sec==="custom"){ OVCUSTOM=true; render(); $("#ovSecsIn").focus(); } else { OVCUSTOM=false; setK("overlaySeconds",+b.dataset.sec); render(); } });
+$("#ovSecsIn").addEventListener("change",e=>{ let v=parseFloat(e.target.value); if(isNaN(v)) return render(); v=Math.round(Math.min(30,Math.max(.5,v))*2)/2; e.target.value=v; setK("overlaySeconds",v); });
+$$("[data-preview]").forEach(b=>b.addEventListener("click",()=>{ try{ glPreviewIndicator(b.dataset.preview); }catch(e){} }));
 $("#games").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b) return; const l=(S.games||[]).map(g=>({...g}));
   if(b.dataset.gi!==undefined){ const g=l[+b.dataset.gi]; g.isGame=b.dataset.gv==="1"; setK("games",l); flash(g.isGame? `${g.name} counts as a game` : `${g.name} won't be treated as a game`); }

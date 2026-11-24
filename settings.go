@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -48,19 +49,28 @@ type Settings struct {
 	AudioKbps      int    `json:"audioKbps"`
 
 	// Replay / recording
-	ReplayEnabled    bool   `json:"replayEnabled"`
-	ReplayWhen       string `json:"replayWhen"` // "always" | "games" (only while a game is running)
-	ReplaySeconds    int    `json:"replaySeconds"`
-	OutputDir        string `json:"outputDir"`
-	FolderPerGame    bool   `json:"folderPerGame"`
-	HotkeySave       Hotkey `json:"hotkeySave"`
-	HotkeyRecord     Hotkey `json:"hotkeyRecord"`
-	HotkeyToggle     Hotkey `json:"hotkeyToggle"`
-	OverlayToasts    bool   `json:"overlayToasts"`
-	OverlayRec       bool   `json:"overlayRec"`
-	OverlayCorner    string `json:"overlayCorner"` // "tl" | "tr" | "bl" | "br"
-	StartWithWindows bool   `json:"startWithWindows"`
-	StartMinimized   bool   `json:"startMinimized"`
+	ReplayEnabled bool   `json:"replayEnabled"`
+	ReplayWhen    string `json:"replayWhen"` // "always" | "games" (only while a game is running)
+	ReplaySeconds int    `json:"replaySeconds"`
+	OutputDir     string `json:"outputDir"`
+	FolderPerGame bool   `json:"folderPerGame"`
+	HotkeySave    Hotkey `json:"hotkeySave"`
+	HotkeyRecord  Hotkey `json:"hotkeyRecord"`
+	HotkeyToggle  Hotkey `json:"hotkeyToggle"`
+	OverlayToasts bool   `json:"overlayToasts"`
+	OverlayRec    bool   `json:"overlayRec"`
+	OverlayCorner string `json:"overlayCorner"` // "tl" | "tr" | "bl" | "br"
+	// "icons": small icons for saves and recording (problems still get a
+	// text notice); "cards": text notices for everything.
+	OverlayStyle      string  `json:"overlayStyle"`
+	OverlaySeconds    float64 `json:"overlaySeconds"` // how long notices stay up
+	OverlaySize       string  `json:"overlaySize"`    // "small" | "medium" | "large"
+	ReplayIconColor   string  `json:"replayIconColor"`
+	ReplayIconOpacity int     `json:"replayIconOpacity"` // percent
+	RecDotColor       string  `json:"recDotColor"`
+	RecDotOpacity     int     `json:"recDotOpacity"`
+	StartWithWindows  bool    `json:"startWithWindows"`
+	StartMinimized    bool    `json:"startMinimized"`
 
 	// Games: what ReKapture has detected, and the user's corrections.
 	Games []GameRule `json:"games"`
@@ -102,43 +112,50 @@ const (
 
 func DefaultSettings(videosDir string) Settings {
 	return Settings{
-		CaptureMode:   "auto",
-		AutoTarget:    "window",
-		ShowCursor:    true,
-		Resolution:    "native",
-		CustomWidth:   1920,
-		CustomHeight:  1080,
-		Aspect:        "source",
-		AspectFit:     "fit",
-		FPS:           60,
-		Codec:         "h264",
-		RateControl:   "vbr",
-		BitrateMbps:   50,
-		CQ:            23,
-		Preset:        5,
-		Container:     "mp4",
-		SystemAudio:   true,
-		Mic:           false,
-		AudioTracks:   "both",
-		DiscordAudio:  "separate",
-		AudioKbps:     192,
-		ReplayEnabled: true,
-		ReplayWhen:    "always",
-		ReplaySeconds: 120,
-		OutputDir:     filepath.Join(videosDir, "ReKapture"),
-		FolderPerGame: true,
-		HotkeySave:    Hotkey{Mods: modAlt | modShift, Key: vkF10},
-		HotkeyRecord:  Hotkey{Mods: modAlt | modShift, Key: vkF9},
-		HotkeyToggle:  Hotkey{Mods: modAlt | modShift, Key: vkX},
-		OverlayToasts: true,
-		OverlayRec:    true,
-		OverlayCorner: "tr",
-		Accent:        DefaultAccent,
-		AutoUpdate:    true,
-		DiscordMB:     20,
-		ShareGameName: true,
-		ClipboardMB:   20,
-		ShareMode:     "copy",
+		CaptureMode:       "auto",
+		AutoTarget:        "window",
+		ShowCursor:        true,
+		Resolution:        "native",
+		CustomWidth:       1920,
+		CustomHeight:      1080,
+		Aspect:            "source",
+		AspectFit:         "fit",
+		FPS:               60,
+		Codec:             "h264",
+		RateControl:       "vbr",
+		BitrateMbps:       50,
+		CQ:                23,
+		Preset:            5,
+		Container:         "mp4",
+		SystemAudio:       true,
+		Mic:               false,
+		AudioTracks:       "both",
+		DiscordAudio:      "separate",
+		AudioKbps:         192,
+		ReplayEnabled:     true,
+		ReplayWhen:        "always",
+		ReplaySeconds:     120,
+		OutputDir:         filepath.Join(videosDir, "ReKapture"),
+		FolderPerGame:     true,
+		HotkeySave:        Hotkey{Mods: modAlt | modShift, Key: vkF10},
+		HotkeyRecord:      Hotkey{Mods: modAlt | modShift, Key: vkF9},
+		HotkeyToggle:      Hotkey{Mods: modAlt | modShift, Key: vkX},
+		OverlayToasts:     true,
+		OverlayRec:        true,
+		OverlayCorner:     "tr",
+		OverlayStyle:      "icons",
+		OverlaySeconds:    3,
+		OverlaySize:       "medium",
+		ReplayIconColor:   "#76B900",
+		ReplayIconOpacity: 90,
+		RecDotColor:       "#E5484D",
+		RecDotOpacity:     90,
+		Accent:            DefaultAccent,
+		AutoUpdate:        true,
+		DiscordMB:         20,
+		ShareGameName:     true,
+		ClipboardMB:       20,
+		ShareMode:         "copy",
 	}
 }
 
@@ -214,6 +231,26 @@ func (s *Settings) Normalize(def Settings) {
 	}
 	s.Accent = strings.ToUpper(s.Accent)
 	s.OverlayCorner = oneOf(s.OverlayCorner, []string{"tl", "tr", "bl", "br"}, "tr")
+	s.OverlayStyle = oneOf(s.OverlayStyle, []string{"icons", "cards"}, def.OverlayStyle)
+	s.OverlaySize = oneOf(s.OverlaySize, []string{"small", "medium", "large"}, "medium")
+	if s.OverlaySeconds <= 0 {
+		s.OverlaySeconds = def.OverlaySeconds
+	}
+	s.OverlaySeconds = math.Round(math.Max(0.5, math.Min(30, s.OverlaySeconds))*10) / 10
+	if !hexColor.MatchString(s.ReplayIconColor) {
+		s.ReplayIconColor = def.ReplayIconColor
+	}
+	if !hexColor.MatchString(s.RecDotColor) {
+		s.RecDotColor = def.RecDotColor
+	}
+	if s.ReplayIconOpacity == 0 {
+		s.ReplayIconOpacity = def.ReplayIconOpacity
+	}
+	if s.RecDotOpacity == 0 {
+		s.RecDotOpacity = def.RecDotOpacity
+	}
+	s.ReplayIconOpacity = clamp(s.ReplayIconOpacity, 10, 100)
+	s.RecDotOpacity = clamp(s.RecDotOpacity, 10, 100)
 	if s.HotkeySave.Key == 0 {
 		s.HotkeySave = def.HotkeySave
 	}
