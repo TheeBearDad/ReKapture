@@ -57,9 +57,15 @@ type Settings struct {
 	HotkeySave    Hotkey `json:"hotkeySave"`
 	HotkeyRecord  Hotkey `json:"hotkeyRecord"`
 	HotkeyToggle  Hotkey `json:"hotkeyToggle"`
-	OverlayToasts bool   `json:"overlayToasts"`
-	OverlayRec    bool   `json:"overlayRec"`
-	OverlayCorner string `json:"overlayCorner"` // "tl" | "tr" | "bl" | "br"
+
+	// Controller shortcuts: action ("save" | "record" | "toggle") -> buttons.
+	PadEnabled    bool                `json:"padEnabled"`
+	PadHold       bool                `json:"padHold"` // buttons must be held half a second
+	PadXbox       map[string][]string `json:"padXbox"`
+	PadPS         map[string][]string `json:"padPS"`
+	OverlayToasts bool                `json:"overlayToasts"`
+	OverlayRec    bool                `json:"overlayRec"`
+	OverlayCorner string              `json:"overlayCorner"` // "tl" | "tr" | "bl" | "br"
 	// "icons": small icons for saves and recording (problems still get a
 	// text notice); "cards": text notices for everything.
 	OverlayStyle      string  `json:"overlayStyle"`
@@ -139,6 +145,9 @@ func DefaultSettings(videosDir string) Settings {
 		FolderPerGame:     true,
 		HotkeySave:        Hotkey{Mods: modAlt | modShift, Key: vkF10},
 		HotkeyRecord:      Hotkey{Mods: modAlt | modShift, Key: vkF9},
+		PadEnabled:        true,
+		PadXbox:           map[string][]string{"save": {"View", "Menu"}},
+		PadPS:             map[string][]string{"save": {"Create", "Options"}},
 		HotkeyToggle:      Hotkey{Mods: modAlt | modShift, Key: vkX},
 		OverlayToasts:     true,
 		OverlayRec:        true,
@@ -231,6 +240,8 @@ func (s *Settings) Normalize(def Settings) {
 	}
 	s.Accent = strings.ToUpper(s.Accent)
 	s.OverlayCorner = oneOf(s.OverlayCorner, []string{"tl", "tr", "bl", "br"}, "tr")
+	s.PadXbox = normalizePad(PadXbox, s.PadXbox)
+	s.PadPS = normalizePad(PadPS, s.PadPS)
 	s.OverlayStyle = oneOf(s.OverlayStyle, []string{"icons", "cards"}, def.OverlayStyle)
 	s.OverlaySize = oneOf(s.OverlaySize, []string{"small", "medium", "large"}, "medium")
 	if s.OverlaySeconds <= 0 {
@@ -260,6 +271,32 @@ func (s *Settings) Normalize(def Settings) {
 	if s.HotkeyToggle.Key == 0 {
 		s.HotkeyToggle = def.HotkeyToggle
 	}
+}
+
+func normalizePad(family string, in map[string][]string) map[string][]string {
+	// Every action is kept, cleared ones as an empty list, so a cleared
+	// shortcut stays cleared (loading merges the file over the defaults).
+	out := map[string][]string{}
+	for _, act := range PadActions {
+		c := NormalizeCombo(family, in[act])
+		if c == nil {
+			c = []string{}
+		}
+		out[act] = c
+	}
+	return out
+}
+
+// PadBindingsOf converts settings into detector bindings.
+func PadBindingsOf(s Settings) map[string]PadBindings {
+	b := map[string]PadBindings{PadXbox: {}, PadPS: {}}
+	for act, names := range s.PadXbox {
+		b[PadXbox][act] = PadSetOf(PadXbox, names)
+	}
+	for act, names := range s.PadPS {
+		b[PadPS][act] = PadSetOf(PadPS, names)
+	}
+	return b
 }
 
 func normalizeGames(in []GameRule) []GameRule {

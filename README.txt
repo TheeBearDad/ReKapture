@@ -22,7 +22,7 @@ INSTALL
 There are two ways to use ReKapture. Pick one.
 
 Installer (recommended)
-1. Run ReKapture-Setup-2.6.0.exe.
+1. Run ReKapture-Setup-2.7.0.exe.
 2. Windows may show "Windows protected your PC" because ReKapture isn't
    code-signed. Click "More info", then "Run anyway".
 3. Follow the steps. ReKapture installs to C:\Program Files (x86)\ReKapture
@@ -172,6 +172,21 @@ Replay & saving
 Appearance
 - Change the accent color: presets, a hue bar, or any custom color. Buttons,
   highlights, the window border and in-game notices all follow it.
+
+Controller shortcuts
+- Save replays, record and turn Instant Replay on or off from an Xbox or
+  PlayStation controller (DualSense, DualSense Edge or DualShock 4), wired
+  or Bluetooth. Defaults: Save replay is View + Menu on Xbox and
+  Create + Options on PlayStation.
+- Change them under "Shortcuts & overlay": click a shortcut, press the
+  buttons together and let go. Esc cancels, Delete clears it.
+- Games still see the buttons you press, so a shortcut using Menu or
+  Options may also open the game's menu. Turn on "Hold the buttons for half
+  a second" to avoid accidental saves, or pick buttons your game doesn't
+  use for much.
+- ReKapture only reads the controller; it never changes its lights or
+  settings. If DS4Windows hides your PlayStation controller, set the Xbox
+  shortcut instead: DS4Windows shows it to Windows as an Xbox controller.
 
 Overlay
 - Small icons over your game, in the corner of your choice: a rewind icon

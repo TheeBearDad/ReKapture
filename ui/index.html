@@ -249,6 +249,16 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
 .hk button.k{all:unset;cursor:pointer;min-width:150px;text-align:center;padding:8px 12px;border-radius:7px;border:1px solid var(--line2);background:var(--panel);font:500 14px var(--f)}
 .hk button.k.listen{border-color:var(--green);color:var(--green-hi)}
 .hk button.k:focus-visible{outline:2px solid var(--green)}
+.padgrid{display:grid;gap:8px;max-width:640px}
+.padhead,.padrow{display:grid;grid-template-columns:minmax(0,1fr) 190px 190px;gap:10px;align-items:center}
+.padhead span{font:600 12px var(--f);color:var(--muted)}
+.padk{all:unset;cursor:pointer;min-height:36px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:5px;padding:5px 8px;border-radius:7px;border:1px solid var(--line2);background:var(--panel);font:500 13px var(--f);color:var(--muted);box-sizing:border-box}
+.padk:hover{border-color:var(--muted)}
+.padk:focus-visible{outline:2px solid var(--green)}
+.padk.listen{border-color:var(--green);color:var(--green-hi)}
+.padk .pb{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:5px;background:var(--raised);border:1px solid var(--line2);color:var(--text);font:600 12px var(--f)}
+.padk .pb i{font-style:normal;font-weight:700}
+.padk .plus{color:var(--dim)}
 .corners{display:grid;grid-template-columns:repeat(2,38px);gap:6px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:7px;width:max-content}
 .corners button{all:unset;cursor:pointer;height:24px;border-radius:4px;background:#1E2224;position:relative}
 .corners button[aria-pressed=true]{background:var(--green)}
@@ -501,6 +511,22 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
         </div>
       </div>
       <div class="group">
+        <div><h2>Controller</h2><p class="sub">Press buttons together on an Xbox or PlayStation controller. Works while you play, wired or Bluetooth.</p></div>
+        <div class="ctl">
+          <div class="toggle-row"><div>Use controller shortcuts</div><button class="switch" role="switch" data-k="padEnabled" aria-label="Use controller shortcuts"></button></div>
+          <p class="hint" id="padStatus" data-show="s.padEnabled"></p>
+          <div class="padgrid" data-show="s.padEnabled" role="table" aria-label="Controller shortcuts">
+            <div class="padhead" role="row"><span role="columnheader"></span><span role="columnheader">Xbox</span><span role="columnheader">PlayStation</span></div>
+            <div class="padrow" role="row"><span role="rowheader">Save replay</span><button class="padk" data-pad="xbox" data-act="save"></button><button class="padk" data-pad="ps" data-act="save"></button></div>
+            <div class="padrow" role="row"><span role="rowheader">Start or stop recording</span><button class="padk" data-pad="xbox" data-act="record"></button><button class="padk" data-pad="ps" data-act="record"></button></div>
+            <div class="padrow" role="row"><span role="rowheader">Turn Instant Replay on or off</span><button class="padk" data-pad="xbox" data-act="toggle"></button><button class="padk" data-pad="ps" data-act="toggle"></button></div>
+          </div>
+          <p class="hint" id="padConflict" data-show="s.padEnabled" style="color:var(--amber)"></p>
+          <p class="hint" data-show="s.padEnabled">Click a shortcut, then press the buttons together and let go. Esc cancels, Delete clears it.</p>
+          <div class="toggle-row" data-show="s.padEnabled"><div>Hold the buttons for half a second<p class="hint">Games still see the presses, so View + Menu may also open the game's menu. Holding avoids triggering it by accident.</p></div><button class="switch" role="switch" data-k="padHold" aria-label="Hold the buttons for half a second"></button></div>
+        </div>
+      </div>
+      <div class="group">
         <div><h2>Overlay</h2><p class="sub">What shows over your game when you save a replay or start and stop recording. It's never in your clips.</p></div>
         <div class="ctl">
           <div class="toggle-row"><div>Show notices over games</div><button class="switch" role="switch" data-k="overlayToasts" aria-label="Show notices over games"></button></div>
@@ -716,9 +742,11 @@ const VK={8:"Backspace",9:"Tab",13:"Enter",19:"Pause",32:"Space",33:"PgUp",34:"P
 
 /* ---------- mock for previewing in a browser ---------- */
 if(!native){
+  window.glPadRecord=async fam=>{ if(!fam) return; const seq=fam==="xbox"?[["View"],["View","Menu"]]:[["Create"],["Create","Options"]];
+    seq.forEach((b,i)=>setTimeout(()=>window.__glPadLive({family:fam,buttons:b,done:false}),300+i*300)); setTimeout(()=>window.__glPadLive({family:fam,buttons:seq[1],done:true}),1100); };
   window.glPreviewIndicator=async k=>flash("Shown in the "+({tl:"top left",tr:"top right",bl:"bottom left",br:"bottom right"}[S.overlayCorner])+" corner for "+S.overlaySeconds+" s");
-  const mk=(o)=>Object.assign({overlayStyle:"icons",overlaySeconds:3,overlaySize:"medium",replayIconColor:"#76B900",replayIconOpacity:90,recDotColor:"#E5484D",recDotOpacity:90,captureMode:"auto",autoTarget:"window",discordAudio:"separate",replayWhen:"always",autoUpdate:true,games:[{exe:"Cyberpunk2077.exe",name:"Cyberpunk 2077",isGame:true},{exe:"cs2.exe",name:"Counter-Strike 2",isGame:true},{exe:"Photos.exe",name:"Photos",isGame:false}],monitorId:"\\\\.\\DISPLAY1",windowExe:"",showCursor:true,resolution:"native",customWidth:1920,customHeight:1080,aspect:"source",aspectFit:"fit",fps:60,codec:"h264",rateControl:"vbr",bitrateMbps:50,cq:23,preset:5,container:"mp4",systemAudio:true,systemDeviceId:"",mic:true,micDeviceId:"",audioTracks:"both",audioKbps:192,replayEnabled:true,replaySeconds:120,outputDir:"C:\\Users\\Tyler\\Videos\\ReKapture",folderPerGame:true,hotkeySave:{mods:5,key:121},hotkeyRecord:{mods:5,key:120},hotkeyToggle:{mods:5,key:88},overlayToasts:true,overlayRec:true,overlayCorner:"tr",startWithWindows:false,startMinimized:false,accent:"#76B900",discordMB:20,shareGameName:true,webhooks:[],clipboardMB:20,shareMode:"copy"},o);
-  const mock={settings:mk({}),gpu:"NVIDIA GeForce RTX 5080",version:"1.0.0",nvenc:{checked:true,h264:true,hevc:true,av1:true},
+  const mk=(o)=>Object.assign({padEnabled:true,padHold:false,padXbox:{save:["View","Menu"],record:[],toggle:[]},padPS:{save:["Create","Options"],record:["L1","Touchpad"],toggle:[]},overlayStyle:"icons",overlaySeconds:3,overlaySize:"medium",replayIconColor:"#76B900",replayIconOpacity:90,recDotColor:"#E5484D",recDotOpacity:90,captureMode:"auto",autoTarget:"window",discordAudio:"separate",replayWhen:"always",autoUpdate:true,games:[{exe:"Cyberpunk2077.exe",name:"Cyberpunk 2077",isGame:true},{exe:"cs2.exe",name:"Counter-Strike 2",isGame:true},{exe:"Photos.exe",name:"Photos",isGame:false}],monitorId:"\\\\.\\DISPLAY1",windowExe:"",showCursor:true,resolution:"native",customWidth:1920,customHeight:1080,aspect:"source",aspectFit:"fit",fps:60,codec:"h264",rateControl:"vbr",bitrateMbps:50,cq:23,preset:5,container:"mp4",systemAudio:true,systemDeviceId:"",mic:true,micDeviceId:"",audioTracks:"both",audioKbps:192,replayEnabled:true,replaySeconds:120,outputDir:"C:\\Users\\Tyler\\Videos\\ReKapture",folderPerGame:true,hotkeySave:{mods:5,key:121},hotkeyRecord:{mods:5,key:120},hotkeyToggle:{mods:5,key:88},overlayToasts:true,overlayRec:true,overlayCorner:"tr",startWithWindows:false,startMinimized:false,accent:"#76B900",discordMB:20,shareGameName:true,webhooks:[],clipboardMB:20,shareMode:"copy"},o);
+  const mock={settings:mk({}),gpu:"NVIDIA GeForce RTX 5080",version:"1.0.0",pads:["Xbox controller","DualSense (Bluetooth)"],nvenc:{checked:true,h264:true,hevc:true,av1:true},
     monitors:[{id:"\\\\.\\DISPLAY1",name:"Display 1 — 2560×1440 @ 240 Hz (main)",width:2560,height:1440},{id:"\\\\.\\DISPLAY2",name:"Display 2 — 1920×1080 @ 60 Hz",width:1920,height:1080}],
     windows:[{exe:"cs2.exe",title:"Counter-Strike 2"},{exe:"FortniteClient-Win64-Shipping.exe",title:"Fortnite"}],
     outputs:[{id:"o1",name:"Speakers (Realtek(R) Audio)"},{id:"o2",name:"Headphones (Arctis Nova 7)"}],inputs:[{id:"i1",name:"Microphone (Arctis Nova 7)"}],hotkeyErrors:"",
@@ -830,6 +858,27 @@ function renderOverlayOpts(){
   if(document.activeElement!==$("#ovSecsIn")) $("#ovSecsIn").value=secs;
 }
 let OVCUSTOM=false;
+const PAD_NAME={xbox:"Xbox",ps:"PlayStation"};
+const PAD_GLYPH={xbox:{A:["A","#6BBF3B"],B:["B","#E5484D"],X:["X","#3B8BEB"],Y:["Y","#E8C33B"]},
+  ps:{Cross:["✕","#7DA7F2"],Circle:["○","#F27D86"],Square:["□","#E08BD6"],Triangle:["△","#4FC9A4"]}};
+let padListen=null, PADS=[];
+function padPills(fam,list){
+  if(!list||!list.length) return "Not set";
+  return list.map(b=>{ const g=(PAD_GLYPH[fam]||{})[b]; return g? `<span class="pb"><i style="color:${g[1]}">${g[0]}</i>${fam==="ps"?esc(b):""}</span>` : `<span class="pb">${esc(b)}</span>`; }).join('<span class="plus">+</span>');
+}
+function renderPads(){
+  $$(".padk").forEach(b=>{
+    const fam=b.dataset.pad, act=b.dataset.act, list=(S[fam==="xbox"?"padXbox":"padPS"]||{})[act]||[];
+    if(padListen===b) return;
+    b.innerHTML=padPills(fam,list);
+    b.setAttribute("aria-label",`${b.closest(".padrow").firstElementChild.textContent}, ${PAD_NAME[fam]}: ${list.length? list.join(" + ") : "not set"}`);
+  });
+  $("#padStatus").textContent = PADS.length? "Connected: "+PADS.join(", ") : "No controller found. Turn one on or plug it in.";
+  const clash=[];
+  for(const fam of ["xbox","ps"]){ const m=S[fam==="xbox"?"padXbox":"padPS"]||{}, seen={};
+    for(const act of ["save","record","toggle"]){ const k=(m[act]||[]).slice().sort().join("+"); if(!k) continue; if(seen[k]) clash.push(`${PAD_NAME[fam]}: two shortcuts use ${(m[act]||[]).join(" + ")}`); seen[k]=1; } }
+  $("#padConflict").textContent=clash.join(". "); $("#padConflict").style.display=clash.length?"":"none";
+}
 function render(){
   if(!S) return;
   $$("[data-k]").forEach(el=>{
@@ -854,6 +903,7 @@ function render(){
   $("#discordHint").textContent = S.discordAudio==="separate"&&S.audioTracks==="mixed"? "You chose one mixed track under Audio tracks, so Discord is mixed in. Pick Mixed + separate there to give it its own track." : dh+" Needs Windows 10 version 2004 or newer.";
   renderGames();
   renderOverlayOpts();
+  renderPads();
   let idx=REPLAY_STOPS.indexOf(S.replaySeconds); if(idx<0) idx=REPLAY_STOPS.findIndex(x=>x>=S.replaySeconds); if(idx<0) idx=REPLAY_STOPS.length-1;
   const rl=$("#replayLen"); rl.value=idx; rl.style.setProperty("--p",(idx/13*100)+"%"); $("#v-replay").textContent=dur(S.replaySeconds);
   const per = S.rateControl==="cq"? S.bitrateMbps*1.0 : S.bitrateMbps;
@@ -965,9 +1015,31 @@ window.__glCapTestDone=r=>{ $("#capTest").removeAttribute("aria-disabled"); $("#
   o.textContent=r.report.summary; o.style.color = /bottleneck|almost no frames/.test(r.report.summary) ? "var(--amber)" : ""; };
 
 /* hotkey capture */
+function stopPadListen(){ if(!padListen) return; padListen.classList.remove("listen"); padListen=null; try{ glPadRecord(""); }catch(e){} render(); }
+$$(".padk").forEach(b=>b.addEventListener("click",()=>{
+  if(padListen===b){ stopPadListen(); return; }
+  stopPadListen(); if(hkListen) stopListen();
+  padListen=b; b.classList.add("listen"); b.textContent=`Press buttons on your ${PAD_NAME[b.dataset.pad]} controller…`;
+  glPadRecord(b.dataset.pad);
+}));
+window.__glPadLive=r=>{
+  if(!padListen) return;
+  if(!r.done){ padListen.innerHTML=padPills(r.family,r.buttons); return; }
+  const b=padListen; padListen.classList.remove("listen"); padListen=null;
+  if(r.family && r.buttons && r.buttons.length){
+    const key=b.dataset.pad==="xbox"?"padXbox":"padPS", m=Object.assign({},S[key]); m[b.dataset.act]=r.buttons; setK(key,m);
+    flash(`${b.closest(".padrow").firstElementChild.textContent}: ${r.buttons.join(" + ")}`);
+  } else if(!r.family){ flash("No buttons were pressed, so nothing changed"); }
+  render();
+};
+window.__glPads=n=>{ PADS=n||[]; if(S) renderPads(); };
 $$("[data-hk]").forEach(b=>b.addEventListener("click",()=>{ if(hkListen) stopListen(); hkListen=b; b.classList.add("listen"); b.textContent="Press keys…"; glSetHotkeyCapture(true); }));
 function stopListen(){ if(!hkListen) return; hkListen.classList.remove("listen"); hkListen=null; glSetHotkeyCapture(false); render(); }
 document.addEventListener("keydown",e=>{
+  if(padListen){ e.preventDefault(); e.stopPropagation();
+    if(e.key==="Escape") stopPadListen();
+    else if(e.key==="Delete"||e.key==="Backspace"){ const b=padListen, key=b.dataset.pad==="xbox"?"padXbox":"padPS", m=Object.assign({},S[key]); m[b.dataset.act]=[]; stopPadListen(); setK(key,m); flash("Shortcut cleared"); }
+    return; }
   if(!hkListen) return; e.preventDefault(); e.stopPropagation();
   if(e.key==="Escape"){ stopListen(); return; }
   if([16,17,18,91,92].includes(e.keyCode)) { const m=(e.altKey?1:0)|(e.ctrlKey?2:0)|(e.shiftKey?4:0)|(e.metaKey?8:0); hkListen.textContent=hkText({mods:m,key:0}).replace(" + Not set","").replace("Not set","")+" + …"; return; }
@@ -1308,7 +1380,8 @@ window.__glSettings=s=>{ S=s; render(); renderStatus(ST); };
   const r=await glGetInit();
   S=r.settings; MEDIA=r.mediaBase||""; MONS=r.monitors||[]; WINS=r.windows||[]; OUTS=r.outputs||[]; INS=r.inputs||[];
   try{ glUpdateState().then(renderUpdate); }catch(e){}
-  $("#gpuName").textContent=r.gpu||"GPU"; $("#ver").textContent="ReKapture "+(r.version||"")+(r.portable?" (portable)":"");
+  $("#gpuName").textContent=r.gpu||"GPU"; PADS=r.pads||[];
+  $("#ver").textContent="ReKapture "+(r.version||"")+(r.portable?" (portable)":"");
   if(r.portable) $("#whereNote").innerHTML="<b>Where things are.</b> This is the portable version: settings and the log are kept in the Data folder next to ReKapture.exe, so you can move the whole folder. If something goes wrong, the log file says why.";
   if(r.hotkeyErrors) $("#hkErr").textContent=r.hotkeyErrors;
   renderSources(); render(); renderStatus(r.status||{}); if(r.nvenc) window.__glNvenc(r.nvenc);

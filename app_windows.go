@@ -28,7 +28,7 @@ import (
 //go:embed ui/index.html
 var indexHTML string
 
-const appVersion = "2.6.0"
+const appVersion = "2.7.0"
 
 const (
 	wmClose     = 0x0010
@@ -61,6 +61,7 @@ type App struct {
 	trayOK         bool
 	taskbarCreated uintptr
 	oldProc        uintptr
+	pads           *padManager
 	status         *coalescer // delivers status to the window (see coalesce.go)
 	statusOnce     sync.Once
 	lastSt         atomic.Value
@@ -184,6 +185,16 @@ func main() {
 		log.Printf("clip preview server unavailable: %v", err)
 	}
 	a.engine = NewEngine(plat, ffmpeg, s, a.onStatus, a.onEngineSettings)
+	a.pads = newPadManager(a.onPadAction,
+		func(family string, buttons []string, done bool) {
+			a.wv.Dispatch(func() {
+				a.evalJSON("__glPadLive", map[string]interface{}{"family": family, "buttons": buttons, "done": done})
+			})
+		},
+		func(names []string) {
+			a.wv.Dispatch(func() { a.evalJSON("__glPads", names) })
+		})
+	a.pads.Apply(s)
 	a.discordMB.Store(int32(s.DiscordMB))
 	a.sharer = &Sharer{FFmpeg: ffmpeg, Command: plat.Command, TempDir: filepath.Join(localDataDir(), "share"),
 		ClipDir: filepath.Join(localDataDir(), "clipboard"),
@@ -488,6 +499,18 @@ func (a *App) notify(kind, title, msg string) {
 	})
 }
 
+// onPadAction runs a controller shortcut, like the matching keyboard one.
+func (a *App) onPadAction(action string) {
+	switch action {
+	case "save":
+		go a.engine.SaveReplay()
+	case "record":
+		go a.engine.ToggleRecording()
+	case "toggle":
+		go a.toggleReplay()
+	}
+}
+
 // showIcon shows a corner indicator with the user's color, opacity, size
 // and time. Runs on the UI thread.
 func (a *App) showIcon(icon string) {
@@ -635,6 +658,7 @@ func (a *App) bind() {
 		m["status"] = a.engine.Status()
 		m["gpu"] = GPUName()
 		m["version"] = appVersion
+		m["pads"] = a.pads.Devices()
 		m["portable"] = portable()
 		m["hotkeyErrors"] = a.hkErr
 		if a.media != nil {
@@ -669,6 +693,7 @@ func (a *App) bind() {
 			}
 		}
 		a.settings = s
+		a.pads.Apply(s)
 		a.outDir.Store(s.OutputDir)
 		a.discordMB.Store(int32(s.DiscordMB))
 		ov.corner = s.OverlayCorner
@@ -868,6 +893,7 @@ func (a *App) bind() {
 	})
 	w.Bind("glUpdateCancel", func() { a.updater.CancelDownload() })
 	w.Bind("glOpenReleases", func() { shellOpen("open", "https://github.com/"+UpdateRepo+"/releases", "") })
+	w.Bind("glPadRecord", func(family string) { a.pads.Record(family) })
 	w.Bind("glPreviewIndicator", func(kind string) {
 		// Show what a notice looks like over the screen, with current settings.
 		a.wv.Dispatch(func() {
