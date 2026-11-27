@@ -22,7 +22,7 @@ INSTALL
 There are two ways to use ReKapture. Pick one.
 
 Installer (recommended)
-1. Run ReKapture-Setup-2.8.1.exe.
+1. Run ReKapture-Setup-2.8.2.exe.
 2. Windows may show "Windows protected your PC" because ReKapture isn't
    code-signed. Click "More info", then "Run anyway".
 3. Follow the steps. ReKapture installs to C:\Program Files (x86)\ReKapture
@@ -183,9 +183,10 @@ Screenshots
   own icons and notices are never in it, and neither is the mouse pointer.
 - Works whether or not Instant Replay is on. Under "Replay & saving" you
   can change the screenshots folder (Pictures\Screenshots by default) and
-  pick PNG (lossless) or JPG (smaller). Screenshots show up in Recent clips
-  and can be shared to Discord like clips; one too big for your upload
-  limit is sent as a high-quality JPG.
+  pick PNG (lossless) or JPG (smaller).
+- Screenshots have their own tab next to Recent clips on the Home page, and
+  can be shared to Discord like clips; one too big for your upload limit is
+  sent as a high-quality JPG.
 - With HDR turned on in Windows, screenshots are saved in standard (SDR)
   color, so very bright highlights can look flatter than on screen.
 

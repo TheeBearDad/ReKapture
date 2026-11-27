@@ -58,6 +58,27 @@ func ScanClips(root string, limit int) []Clip { return ScanLibrary(root, "", lim
 // too), so only ReKapture's are listed from it.
 var shotNameRe = regexp.MustCompile(`(?i) \d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2} Screenshot( \(\d+\))?\.(png|jpe?g)$`)
 
+// How many of each the Home page lists.
+const (
+	RecentClips = 12
+	RecentShots = 24
+)
+
+// SplitLibrary separates a newest-first list into videos and screenshots,
+// keeping the newest of each.
+func SplitLibrary(all []Clip, videos, shots int) (v, s []Clip) {
+	for _, c := range all {
+		if IsImage(c.Path) {
+			if len(s) < shots {
+				s = append(s, c)
+			}
+		} else if len(v) < videos {
+			v = append(v, c)
+		}
+	}
+	return v, s
+}
+
 // ScanLibrary lists the newest videos and screenshots from the clips folder
 // and the screenshots folder (each with one level of per-game folders).
 func ScanLibrary(clipsDir, shotsDir string, limit int) []Clip {

@@ -50,7 +50,7 @@ jobs:
 
       - name: Unit tests
         if: steps.ver.outputs.skip != 'true'
-        run: go test -count=1 -run 'Classify|GameTracker|DiscordRoot|EffectiveDiscord|AudioTrackLayout|NormalizeGames|NewerVersion|ParseSums|Updater|AllowedDownload|ApplyPortable|PortableData|ArgsAreValid|XboxState|ParsePS|PadDetector|PadRecorder|PadSettings|Indicator|Coalesc|OldCoalescing|ScreenshotArgs|ScreenshotSettings|ScanLibrary' .
+        run: go test -count=1 -run 'Classify|GameTracker|DiscordRoot|EffectiveDiscord|AudioTrackLayout|NormalizeGames|NewerVersion|ParseSums|Updater|AllowedDownload|ApplyPortable|PortableData|ArgsAreValid|XboxState|ParsePS|PadDetector|PadRecorder|PadSettings|Indicator|Coalesc|OldCoalescing|ScreenshotArgs|ScreenshotSettings|ScanLibrary|SplitLibrary' .
 
       - name: Download FFmpeg (Windows, LGPL)
         if: steps.ver.outputs.skip != 'true'

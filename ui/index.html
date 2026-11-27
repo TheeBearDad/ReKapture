@@ -126,6 +126,20 @@ h2{font:600 16px/1.2 var(--fc);margin:0 0 3px;letter-spacing:.2px}
 .clip .n{font:500 14px/1.3 var(--f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .clip .m{color:var(--muted);font:12.5px/1.4 var(--fc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .empty{color:var(--muted);padding:14px 6px}
+.libtabs{display:flex;gap:22px;align-items:baseline}
+.libtabs button{all:unset;cursor:pointer;font:600 17px/1.3 var(--f);color:var(--muted);padding:2px 0 6px;border-bottom:2px solid transparent;position:relative}
+.libtabs button:hover{color:var(--text)}
+.libtabs button[aria-selected=true]{color:var(--text);border-bottom-color:var(--green)}
+.libtabs button:focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:2px}
+.newdot{position:absolute;top:2px;right:-10px;width:7px;height:7px;border-radius:50%;background:var(--green)}
+.cliplist.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-content:start;padding-right:4px}
+.shot{all:unset;cursor:pointer;position:relative;border-radius:6px;overflow:hidden;aspect-ratio:16/9;background:#1A1D1F;outline:2px solid transparent;outline-offset:-2px}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.shot b{position:absolute;left:0;right:0;bottom:0;padding:14px 8px 6px;font:500 12px/1.3 var(--fc);color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.78));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.shot:hover{outline-color:var(--line2)}
+.shot[aria-current=true]{outline-color:var(--green)}
+.shot:focus-visible{outline-color:var(--green)}
+.nothumb::before{content:"";position:absolute;inset:0;margin:auto;width:26px;height:26px;opacity:.35;background:center/contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='1.6'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='m3 16 5-5 4 4 3-3 6 6'/%3E%3C/svg%3E")}
 /* editor */
 .ed-top{display:flex;align-items:center;gap:14px;margin-bottom:16px;min-width:0}
 .ed-top h1{margin:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -332,7 +346,10 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
       </div>
 
       <div class="section-head">
-        <h2>Recent clips</h2>
+        <div class="libtabs" role="tablist" aria-label="Recent">
+          <button role="tab" id="tabClips" data-lib="clips" aria-controls="clips">Recent clips</button>
+          <button role="tab" id="tabShots" data-lib="shots" aria-controls="clips">Screenshots<span class="newdot" id="shotDot" hidden aria-label="new"></span></button>
+        </div>
         <button class="link" id="openOut">Open clips folder</button>
       </div>
       <div class="library">
@@ -350,7 +367,7 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
             <button class="btn small" id="viShow">Show in folder</button>
           </div>
         </div>
-        <div class="cliplist" id="clips" role="list" aria-label="Recent clips"></div>
+        <div class="cliplist" id="clips" role="tabpanel" aria-label="Recent clips"></div>
       </div>
     </section>
 
@@ -773,11 +790,16 @@ if(!native){
     windows:[{exe:"cs2.exe",title:"Counter-Strike 2"},{exe:"FortniteClient-Win64-Shipping.exe",title:"Fortnite"}],
     outputs:[{id:"o1",name:"Speakers (Realtek(R) Audio)"},{id:"o2",name:"Headphones (Arctis Nova 7)"}],inputs:[{id:"i1",name:"Microphone (Arctis Nova 7)"}],hotkeyErrors:"",
     status:{state:"buffering",replayOn:true,recording:false,bufferSeconds:84,video:"HEVC, 2560×1440, 60 fps, 50 Mbps VBR",source:"Display 1 — 2560×1440 @ 240 Hz (main)",clips:[
-      {path:"/tmp/gl-mock/shot1.png",name:"Cyberpunk 2077 2026-11-04 06-20-11 Screenshot.png",kind:"Screenshot",sizeMB:14.2,when:"06:20"},
       {path:"/tmp/gl-mock/clip1.webm",name:"Cyberpunk 2077 2026-11-04 06-18-24 Replay.mp4",kind:"Replay",sizeMB:19,when:"06:18"},
       {path:"/tmp/gl-mock/clip2.webm",name:"Cyberpunk 2077 2026-11-04 06-18-05 Replay.mp4",kind:"Replay",sizeMB:57,when:"06:18"},
       {path:"/tmp/gl-mock/clip3.webm",name:"Counter-Strike 2 2026-11-03 21-14-08 Recording.mp4",kind:"Recording",sizeMB:2310,when:"Nov 3, 21:14"},
-      {path:"/tmp/gl-mock/clip4.webm",name:"Desktop 2026-11-03 19-40-12 Replay.mp4",kind:"Replay",sizeMB:388,when:"Nov 3, 19:40"}]}};
+      {path:"/tmp/gl-mock/clip4.webm",name:"Desktop 2026-11-03 19-40-12 Replay.mp4",kind:"Replay",sizeMB:388,when:"Nov 3, 19:40"}],
+    shots:[
+      {path:"/tmp/gl-mock/shot1.png",name:"Cyberpunk 2077 2026-11-04 06-20-11 Screenshot.png",kind:"Screenshot",sizeMB:14.2,when:"06:20"},
+      {path:"/tmp/gl-mock/shot2.png",name:"Cyberpunk 2077 2026-11-04 06-19-40 Screenshot.png",kind:"Screenshot",sizeMB:15.8,when:"06:19"},
+      {path:"/tmp/gl-mock/shot3.png",name:"Grand Theft Auto V 2026-11-03 22-02-51 Screenshot.png",kind:"Screenshot",sizeMB:12.1,when:"Nov 3, 22:02"},
+      {path:"/tmp/gl-mock/missing.png",name:"Desktop 2026-11-03 18-11-02 Screenshot.png",kind:"Screenshot",sizeMB:4.3,when:"Nov 3, 18:11"},
+      {path:"/tmp/gl-mock/shot1.png",name:"Counter-Strike 2 2026-11-02 21-14-40 Screenshot.png",kind:"Screenshot",sizeMB:9.6,when:"Nov 2, 21:14"}]}};
   window.__mockThumb="/tmp/gl-mock/thumb.jpg";
   window.glGetInit=async()=>mock; window.glSaveSettings=async s=>({settings:s,error:""});
   ["glSetReplay","glSaveReplay","glToggleRecord","glOpenPath","glQuit","glHide","glOpenLog","glSetHotkeyCapture"].forEach(n=>window[n]=async()=>{});
@@ -1030,7 +1052,7 @@ $("#refreshWin").onclick=refreshSources;
 $("#replaySwitch").onclick=()=>{ const on=!ST.replayOn; ST.replayOn=on; S.replayEnabled=on; glSetReplay(on); renderStatus(ST); };
 $("#saveBtn").onclick=()=>glSaveReplay();
 $("#recBtn").onclick=()=>glToggleRecord();
-$("#openOut").onclick=()=>glOpenPath(S.outputDir,"folder");
+$("#openOut").onclick=()=>glOpenPath(LIB==="shots"? S.screenshotDir : S.outputDir,"folder");
 $("#browse").onclick=()=>glPickFolder("");
 $("#browseShots").onclick=()=>glPickFolder("shots");
 $("#openShots").onclick=()=>glOpenPath(S.screenshotDir,"folder");
@@ -1038,7 +1060,7 @@ window.__glPicked=(p,shots)=>{ if(p) setK(shots? "screenshotDir" : "outputDir",p
 $("#openLog").onclick=()=>glOpenLog();
 $("#errLog").onclick=()=>glOpenLog();
 $("#quit").onclick=()=>glQuit();
-$("#clips").addEventListener("click",e=>{ const b=e.target.closest(".clip"); if(!b) return; const c=(ST.clips||[]).find(k=>k.path===b.dataset.path); if(c){ picked=true; showClip(c); } });
+$("#clips").addEventListener("click",e=>{ const b=e.target.closest(".clip, .shot"); if(!b) return; const c=libList().find(k=>k.path===b.dataset.path); if(c){ picked=true; showClip(c); } });
 $("#viPlay").onclick=()=>cur&&glOpenPath(cur.path,"play");
 $("#viEdit").onclick=()=>cur&&openEditor(cur);
 $("#viShare").onclick=()=>cur&&openShare(cur);
@@ -1111,7 +1133,7 @@ function renderStatus(st){
   const rec=!!ST.recording; $("#recBtn").classList.toggle("on",rec); $("#recBtn").setAttribute("aria-label",rec?"Stop recording":"Start recording");
   $("#recTitle").textContent= rec? "Recording" : (ST.finalizing? "Saving…" : "Record");
   $("#recTimer").hidden=!rec; $("#recTimer").textContent=clock(ST.recordSeconds||0);
-  renderClips(ST.clips||[]);
+  renderClips();
   document.title = rec? `● ${clock(ST.recordSeconds||0)}  ReKapture` : "ReKapture";
 }
 window.__glStatus=renderStatus;
@@ -1120,7 +1142,7 @@ window.__glStatus=renderStatus;
 let MEDIA="", cur=null, picked=false;
 const NAME_RE=/^(.*) (\d{4})-(\d{2})-(\d{2}) (\d{2})-(\d{2})-(\d{2}) (Replay|Recording|Screenshot)( \(\d+\))?(\.\w+)$/;
 function parseName(k){ const m=NAME_RE.exec(k.name); return m? {title:m[1], kind:m[8]} : {title:k.name.replace(/\.\w+$/,""), kind:k.kind}; }
-function mediaURL(kind,p){ if(MEDIA) return `${MEDIA}/${kind}?p=${encodeURIComponent(p)}`; return (kind==="thumb"||kind==="strip")? (window.__mockThumb||"") : p; }
+function mediaURL(kind,p){ if(MEDIA) return `${MEDIA}/${kind}?p=${encodeURIComponent(p)}`; if(kind==="thumb"&&/\.(png|jpe?g)$/i.test(p)) return p; return (kind==="thumb"||kind==="strip")? (window.__mockThumb||"") : p; }
 function note(t,busy){ const n=$("#viewerNote"); n.textContent=t||""; n.hidden=!t; n.toggleAttribute("data-busy",!!busy); }
 const isShot=c=>/\.(png|jpe?g)$/i.test(c.path||c.name||"");
 function showClip(c){
@@ -1137,7 +1159,7 @@ function showClip(c){
   $("#viMeta").textContent=`${n.kind}, ${c.when}, ${size(c.sizeMB)}`;
   markCurrent();
 }
-function markCurrent(){ $$("#clips .clip").forEach(b=>b.setAttribute("aria-current", !!cur && b.dataset.path===cur.path)); }
+function markCurrent(){ $$("#clips .clip, #clips .shot").forEach(b=>b.setAttribute("aria-current", !!cur && b.dataset.path===cur.path)); }
 function playerFallback(){
   const v=$("#player"); if(!cur||isShot(cur)) return;
   if(v.dataset.stage==="orig" && MEDIA){ v.dataset.stage="preview"; note("Making a preview copy…", true); v.src=mediaURL("preview",cur.path); }
@@ -1147,13 +1169,39 @@ function playerFallback(){
   v.addEventListener("error",playerFallback);
   v.addEventListener("loadedmetadata",()=>{ if(v.videoWidth===0) playerFallback(); });
   v.addEventListener("loadeddata",()=>note("")); })();
-function renderClips(clips){
-  const c=$("#clips"); const sig=JSON.stringify(clips);
+// Thumbnails can fail while a clip is still being written or the PC is
+// busy: try once more, then show a placeholder instead of an empty box.
+function thumbFail(img){
+  if(!img.dataset.retried){ img.dataset.retried="1"; const u=img.src; setTimeout(()=>{ if(img.isConnected) img.src=u+(u.includes("?")?"&":"?")+"retry=1"; },2500); return; }
+  img.parentElement&&img.parentElement.classList.add("nothumb"); img.remove();
+}
+let LIB=localStorageGet("libTab")==="shots"? "shots" : "clips", seenShot=localStorageGet("seenShot")||"";
+function libList(){ return (LIB==="shots"? ST.shots : ST.clips)||[]; }
+function setLib(tab){
+  if(tab===LIB) return; LIB=tab; localStorageSet("libTab",tab); picked=false;
+  renderClips(); const l=libList(); showClip(l.find(k=>cur&&k.path===cur.path)||l[0]||null);
+}
+$$(".libtabs button").forEach(b=>b.addEventListener("click",()=>setLib(b.dataset.lib)));
+$(".libtabs").addEventListener("keydown",e=>{ if(e.key==="ArrowRight"||e.key==="ArrowLeft"){ const t=LIB==="clips"?"shots":"clips"; setLib(t); $(t==="shots"?"#tabShots":"#tabClips").focus(); e.preventDefault(); } });
+function renderClips(){
+  const shots=LIB==="shots", clips=libList(), c=$("#clips");
+  $$(".libtabs button").forEach(b=>{ const on=b.dataset.lib===LIB; b.setAttribute("aria-selected",on); b.tabIndex=on?0:-1; });
+  const newest=(ST.shots&&ST.shots[0]||{}).path||"";
+  if(shots && newest && newest!==seenShot){ seenShot=newest; localStorageSet("seenShot",newest); }
+  $("#shotDot").hidden = shots || !newest || newest===seenShot;
+  $("#openOut").textContent = shots? "Open screenshots folder" : "Open clips folder";
+  c.setAttribute("aria-labelledby", shots? "tabShots" : "tabClips");
+  const sig=LIB+JSON.stringify(clips);
   if(c.dataset.sig===sig) return; c.dataset.sig=sig;
-  c.innerHTML = clips.length? clips.map(k=>{ const n=parseName(k); return `<button class="clip" role="listitem" data-path="${esc(k.path)}" title="${esc(k.name)}">
-      <span class="thumb"><img loading="lazy" alt="" src="${esc(mediaURL("thumb",k.path))}" onerror="this.remove()"><i>${esc(n.kind)}</i></span>
+  c.classList.toggle("grid", shots && clips.length>0);
+  c.setAttribute("role", "tabpanel");
+  if(shots) c.innerHTML = clips.length? clips.map(k=>{ const n=parseName(k); return `<button class="shot" data-path="${esc(k.path)}" title="${esc(n.title)}, ${esc(k.when)}, ${size(k.sizeMB)}">
+      <img loading="lazy" alt="" src="${esc(mediaURL("thumb",k.path))}" onerror="thumbFail(this)"><b>${esc(n.title)} · ${esc(k.when)}</b></button>`; }).join("")
+    : `<div class="empty">No screenshots yet. Press ${esc(hkText(S&&S.hotkeyShot))} in a game to take one. They're saved to ${esc(S&&S.screenshotDir||"Pictures\\Screenshots")}.</div>`;
+  else c.innerHTML = clips.length? clips.map(k=>{ const n=parseName(k); return `<button class="clip" data-path="${esc(k.path)}" title="${esc(k.name)}">
+      <span class="thumb"><img loading="lazy" alt="" src="${esc(mediaURL("thumb",k.path))}" onerror="thumbFail(this)"><i>${esc(n.kind)}</i></span>
       <span style="min-width:0"><span class="n" style="display:block">${esc(n.title)}</span><span class="m" style="display:block">${esc(k.when)}, ${size(k.sizeMB)}</span></span></button>`; }).join("")
-    : `<div class="empty">Nothing saved yet. Press ${esc(hkText(S&&S.hotkeySave))} in a game to save a replay, or ${esc(hkText(S&&S.hotkeyShot))} for a screenshot.</div>`;
+    : `<div class="empty">Nothing saved yet. Press ${esc(hkText(S&&S.hotkeySave))} in a game to save a replay.</div>`;
   const v=$("#player");
   const stillThere = cur && clips.some(k=>k.path===cur.path);
   if(!clips.length) showClip(null);
@@ -1274,7 +1322,7 @@ window.__glEditDone=r=>{
   ED.saving=false; edRender();
   if(r.ok){ $("#edProg i").style.width="100%"; const name=r.path.split(/[\\/]/).pop(); $("#edStatus").textContent="Saved as "+name; flash("Saved "+name);
     const c=(ST.clips||[]).find(k=>k.path===r.path) || {path:r.path,name,kind:ED.clip.kind,sizeMB:0,when:"just now"};
-    picked=true; setTimeout(()=>{ go("home"); const fresh=(ST.clips||[]).find(k=>k.path===r.path)||c; showClip(fresh); },700);
+    picked=true; setTimeout(()=>{ go("home"); setLib("clips"); const fresh=(ST.clips||[]).find(k=>k.path===r.path)||c; showClip(fresh); },700);
   } else { $("#edProg").hidden=true; $("#edStatus").textContent= r.canceled? "Canceled. Nothing was saved." : ""; if(!r.canceled) flash(r.error||"Couldn't save the edit",true);
     if(ED.mode==="replace"&&ED.clip){ edV.src=mediaURL(edV.dataset.stage==="preview"?"preview":"file",ED.clip.path); } }
 };

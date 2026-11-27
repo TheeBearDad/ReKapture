@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
@@ -97,7 +98,7 @@ func TestEngineScreenshot(t *testing.T) {
 			if !strings.Contains(notes, "shot: Screenshot saved") {
 				t.Errorf("notes: %s", notes)
 			}
-			clips := e.Status().Clips
+			clips := e.Status().Shots
 			if len(clips) == 0 || clips[0].Kind != "Screenshot" || clips[0].Path != shots[0] {
 				t.Errorf("library: %+v", clips)
 			}
@@ -282,5 +283,31 @@ func TestShareScreenshot(t *testing.T) {
 	}
 	if _, err := os.Stat(shot); err != nil {
 		t.Errorf("original must be kept: %v", err)
+	}
+}
+
+func TestSplitLibrary(t *testing.T) {
+	var all []Clip
+	for i := 0; i < 30; i++ {
+		ext := ".mp4"
+		if i%3 == 0 {
+			ext = ".png"
+		}
+		all = append(all, Clip{Path: fmt.Sprintf("/c/%02d%s", i, ext)})
+	}
+	v, s := SplitLibrary(all, 12, 5)
+	if len(v) != 12 || len(s) != 5 {
+		t.Fatalf("got %d videos, %d shots", len(v), len(s))
+	}
+	if v[0].Path != "/c/01.mp4" || s[0].Path != "/c/00.png" || s[4].Path != "/c/12.png" {
+		t.Errorf("order: %v %v", v[0], s)
+	}
+	for _, c := range v {
+		if IsImage(c.Path) {
+			t.Errorf("screenshot in the clips list: %s", c.Path)
+		}
+	}
+	if v, s := SplitLibrary(nil, 12, 24); v != nil || s != nil {
+		t.Errorf("empty library: %v %v", v, s)
 	}
 }

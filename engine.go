@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -58,8 +59,9 @@ type Status struct {
 	Error         string  `json:"error"`
 	Video         string  `json:"video"`
 	Source        string  `json:"source"`
-	Game          string  `json:"game"` // the game being followed, if any
-	Clips         []Clip  `json:"clips"`
+	Game          string  `json:"game"`  // the game being followed, if any
+	Clips         []Clip  `json:"clips"` // newest replays and recordings
+	Shots         []Clip  `json:"shots"` // newest screenshots
 }
 
 type Engine struct {
@@ -95,6 +97,7 @@ type Engine struct {
 	msg        string
 	errMsg     string
 	clips      []Clip
+	shots      []Clip
 	quit       chan struct{}
 	shutOnce   sync.Once
 	ownDirs    map[string]bool
@@ -117,12 +120,12 @@ func NewEngine(p Platform, ffmpeg string, s Settings, onStatus func(Status), onS
 	return e
 }
 
-// RefreshClips reloads the Recent clips list from the clips folder.
+// RefreshClips reloads the Recent clips and screenshots lists from disk.
 func (e *Engine) RefreshClips() {
 	s := e.Settings()
-	clips := ScanLibrary(s.OutputDir, s.ScreenshotDir, 12)
+	clips, shots := SplitLibrary(ScanLibrary(s.OutputDir, s.ScreenshotDir, math.MaxInt), RecentClips, RecentShots)
 	e.mu.Lock()
-	e.clips = clips
+	e.clips, e.shots = clips, shots
 	e.mu.Unlock()
 	e.push()
 }
@@ -214,7 +217,8 @@ func (e *Engine) Status() Status {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	st := Status{ReplayOn: e.replayOn, Recording: e.recording, Finalizing: e.finalizing,
-		Message: e.msg, Error: e.errMsg, Clips: append([]Clip(nil), e.clips...)}
+		Message: e.msg, Error: e.errMsg, Clips: append([]Clip(nil), e.clips...),
+		Shots: append([]Clip(nil), e.shots...)}
 	if e.game != nil {
 		st.Game = e.game.Name
 	}
