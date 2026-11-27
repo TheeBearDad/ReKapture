@@ -20,7 +20,25 @@ import (
 
 // ---------- clip list ----------
 
+// IsImage reports whether p is a screenshot (PNG or JPG) rather than a video.
+func IsImage(p string) bool {
+	switch strings.ToLower(filepath.Ext(p)) {
+	case ".png", ".jpg", ".jpeg":
+		return true
+	}
+	return false
+}
+
+// isMedia reports whether p is a file the library shows: a video or a screenshot.
+func isMedia(p string) bool {
+	ext := strings.ToLower(filepath.Ext(p))
+	return ext == ".mp4" || ext == ".mkv" || IsImage(p)
+}
+
 func clipKind(name string) string {
+	if IsImage(name) {
+		return "Screenshot"
+	}
 	base := strings.TrimSuffix(name, filepath.Ext(name))
 	switch {
 	case strings.HasSuffix(base, " Replay") || strings.Contains(base, " Replay ("):
@@ -31,7 +49,7 @@ func clipKind(name string) string {
 	return "Video"
 }
 
-// ScanClips lists the newest videos in the clips folder (and one level of
+// ScanClips lists the newest videos and screenshots in the clips folder (and one level of
 // per-game folders), so the Recent clips list survives restarts.
 func ScanClips(root string, limit int) []Clip {
 	type item struct {
@@ -40,8 +58,8 @@ func ScanClips(root string, limit int) []Clip {
 	}
 	var items []item
 	consider := func(p string, fi os.FileInfo) {
-		ext := strings.ToLower(filepath.Ext(p))
-		if fi.IsDir() || (ext != ".mp4" && ext != ".mkv") || fi.Size() == 0 {
+		// ".part." files are screenshots still being written.
+		if fi.IsDir() || !isMedia(p) || fi.Size() == 0 || strings.Contains(strings.ToLower(fi.Name()), ".part.") {
 			return
 		}
 		items = append(items, item{p, fi})
@@ -167,14 +185,13 @@ func (m *MediaServer) Base() string {
 
 func (m *MediaServer) Close() { m.ln.Close() }
 
-// allowed reports whether p is a video inside one of the clip folders.
+// allowed reports whether p is a video or screenshot inside one of the clip folders.
 func (m *MediaServer) allowed(p string) (string, bool) {
 	abs, err := filepath.Abs(p)
 	if err != nil {
 		return "", false
 	}
-	ext := strings.ToLower(filepath.Ext(abs))
-	if ext != ".mp4" && ext != ".mkv" {
+	if !isMedia(abs) {
 		return "", false
 	}
 	for _, r := range m.roots() {
@@ -204,8 +221,17 @@ func (m *MediaServer) handle(kind string) http.HandlerFunc {
 		}
 		serve := p
 		ctype := "video/mp4"
-		if strings.EqualFold(filepath.Ext(p), ".mkv") {
+		switch strings.ToLower(filepath.Ext(p)) {
+		case ".mkv":
 			ctype = "video/x-matroska"
+		case ".png":
+			ctype = "image/png"
+		case ".jpg", ".jpeg":
+			ctype = "image/jpeg"
+		}
+		if IsImage(p) && kind != "file" && kind != "thumb" {
+			http.Error(w, "screenshots have no "+kind, http.StatusBadRequest)
+			return
 		}
 		switch kind {
 		case "thumb":
@@ -283,7 +309,11 @@ func (m *MediaServer) run(args ...string) error {
 }
 
 func (m *MediaServer) makeThumb(src, out string) error {
-	for _, ss := range []string{"2", "0"} {
+	seeks := []string{"2", "0"} // past a black first frame, if the clip is long enough
+	if IsImage(src) {
+		seeks = []string{"0"}
+	}
+	for _, ss := range seeks {
 		err := m.run("-hide_banner", "-loglevel", "error", "-y", "-ss", ss, "-i", src,
 			"-frames:v", "1", "-vf", "scale=480:-2", "-q:v", "4", "-f", "image2", out)
 		if fi, e := os.Stat(out); err == nil && e == nil && fi.Size() > 0 {

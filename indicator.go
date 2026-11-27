@@ -2,7 +2,7 @@ package main
 
 // In-game indicators: small icons shown in a screen corner instead of text
 // cards. A rewind icon when a replay is saved, a red dot when recording
-// starts, and a red stop icon when it ends. Drawn here (not from image
+// starts, a red stop icon when it ends, and a camera for screenshots. Drawn here (not from image
 // files) so they're sharp at any display scaling and take any color.
 
 import (
@@ -16,6 +16,7 @@ const (
 	IconReplay   = "replay"
 	IconRecStart = "rec-start"
 	IconRecStop  = "rec-stop"
+	IconShot     = "shot"
 )
 
 // IndicatorFor decides how a notice is shown when "small icons" is on: which
@@ -29,6 +30,8 @@ func IndicatorFor(kind, title string) (icon string, skipCard bool) {
 		return IconRecStart, true
 	case kind == "busy" && strings.HasPrefix(title, "Saving recording"):
 		return IconRecStop, true
+	case kind == "shot":
+		return IconShot, true // shown once the picture is saved
 	case kind == "ok" && (title == "Replay saved" || title == "Recording saved"):
 		return "", true // the icon already confirmed it
 	}
@@ -117,6 +120,30 @@ func RenderIndicator(icon string, px int, hex string, opacity int) *image.RGBA {
 		for _, f := range mk(0, 0) {
 			layers = append(layers, layer{f, light, 1})
 		}
+	case IconShot:
+		layers = append(layers, layer{circle(c, c, rad), col, 1})
+		light := mix(col, 0.72, 255)
+		dark := mix(col, 0.35, 0)
+		box := func(x0, y0, x1, y1, r float64) func(x, y float64) bool {
+			return func(x, y float64) bool { // rounded rectangle
+				dx := math.Max(math.Max(x0+r-x, x-(x1-r)), 0)
+				dy := math.Max(math.Max(y0+r-y, y-(y1-r)), 0)
+				return x >= x0 && x <= x1 && y >= y0 && y <= y1 && dx*dx+dy*dy <= r*r
+			}
+		}
+		// Camera body with a raised viewfinder bump, and a lens ring.
+		bw, bh := rad*1.12, rad*0.74
+		bx0, by0 := c-bw/2, c-bh/2+rad*0.08
+		body := box(bx0, by0, bx0+bw, by0+bh, rad*0.12)
+		bump := box(c-rad*0.26, by0-rad*0.2, c+rad*0.26, by0+rad*0.1, rad*0.06)
+		lc := c + rad*0.08 + bh*0.02
+		layers = append(layers,
+			layer{func(x, y float64) bool { return body(x, y+rad*0.07) || bump(x, y+rad*0.07) }, dark, 1},
+			layer{func(x, y float64) bool { return body(x, y) || bump(x, y) }, light, 1},
+			layer{circle(c, lc, bh*0.36), dark, 1},
+			layer{circle(c, lc, bh*0.24), light, 1},
+			layer{circle(bx0+bw*0.84, by0+bh*0.2, rad*0.055), dark, 1},
+		)
 	case IconRecStart:
 		layers = append(layers, layer{circle(c, c, rad), [3]float64{255, 255, 255}, 0.92}) // thin white rim
 		layers = append(layers, layer{circle(c, c, rad*0.84), col, 1})

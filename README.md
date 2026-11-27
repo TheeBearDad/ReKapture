@@ -22,6 +22,7 @@ Windows may say "Windows protected your PC" because ReKapture isn't code-signed.
 - **Follows your game.** Notices when a game starts (Steam, Epic, Xbox, GOG, EA, Ubisoft, Riot, or anything full screen) and records just its window, so notifications and your other monitors stay out. Clips are sorted into a folder per game.
 - **Every setting unlocked.** Resolution, aspect ratio (including 9:16 vertical), 30–240 fps, H.264, HEVC or AV1, bitrate up to 300 Mbps, and every NVENC preset.
 - **Smart audio.** Game audio, Discord and your mic can each go on their own track, with an everything-mixed track first so clips play right anywhere. You can also leave Discord out entirely.
+- **Screenshots.** Alt+Shift+F1 (or a controller button combo) saves a full-resolution PNG or JPG of exactly what's on your screen, game effects and other apps' overlays included.
 - **Built-in editor.** Trim to the exact frame and change each track's volume.
 - **Discord sharing.** Copy a clip sized to fit your upload limit and paste it into any chat, or post it straight to a channel.
 - **Automatic updates** from this page, each one checked against its SHA-256 before it installs.

@@ -28,7 +28,7 @@ import (
 //go:embed ui/index.html
 var indexHTML string
 
-const appVersion = "2.7.0"
+const appVersion = "2.8.0"
 
 const (
 	wmClose     = 0x0010
@@ -308,6 +308,8 @@ func (a *App) hostProc(hwnd, msg, wp, lp uintptr) uintptr {
 			go a.engine.ToggleRecording()
 		case 3:
 			go a.toggleReplay()
+		case 4:
+			go a.engine.Screenshot()
 		}
 		return 0
 	case msg == wmTray:
@@ -344,7 +346,7 @@ func (a *App) registerHotkeys() {
 	for i, h := range []struct {
 		hk   Hotkey
 		name string
-	}{{a.settings.HotkeySave, "Save replay"}, {a.settings.HotkeyRecord, "Recording"}, {a.settings.HotkeyToggle, "Instant Replay on/off"}} {
+	}{{a.settings.HotkeySave, "Save replay"}, {a.settings.HotkeyRecord, "Recording"}, {a.settings.HotkeyToggle, "Instant Replay on/off"}, {a.settings.HotkeyShot, "Screenshot"}} {
 		if h.hk.Key == 0 {
 			continue
 		}
@@ -365,7 +367,7 @@ func (a *App) registerHotkeys() {
 }
 
 func (a *App) unregisterHotkeys() {
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= 4; i++ {
 		pUnregisterHotKey.Call(a.host, uintptr(i))
 	}
 }
@@ -447,6 +449,7 @@ func (a *App) trayMenu() {
 	if st.ReplayOn {
 		rf = 0x8 // checked
 	}
+	add(7, "Take screenshot\t"+HotkeyString(a.settings.HotkeyShot), 0)
 	add(4, "Instant Replay", rf)
 	add(5, "Open clips folder", 0)
 	add(0, "", 0x800)
@@ -466,6 +469,11 @@ func (a *App) trayMenu() {
 		go a.engine.ToggleRecording()
 	case 4:
 		go a.toggleReplay()
+	case 7:
+		go func() {
+			time.Sleep(300 * time.Millisecond) // let the menu fade out of the picture
+			a.engine.Screenshot()
+		}()
 	case 5:
 		os.MkdirAll(a.settings.OutputDir, 0o755)
 		shellOpen("open", a.settings.OutputDir, "")
@@ -508,6 +516,8 @@ func (a *App) onPadAction(action string) {
 		go a.engine.ToggleRecording()
 	case "toggle":
 		go a.toggleReplay()
+	case "shot":
+		go a.engine.Screenshot()
 	}
 }
 
@@ -516,7 +526,7 @@ func (a *App) onPadAction(action string) {
 func (a *App) showIcon(icon string) {
 	s := a.settings
 	hex, op := s.ReplayIconColor, s.ReplayIconOpacity
-	if icon != IconReplay {
+	if icon != IconReplay && icon != IconShot {
 		hex, op = s.RecDotColor, s.RecDotOpacity
 	}
 	ov.ShowIcon(icon, s.OverlaySize, hex, op, IndicatorMillis(s, "ok"))
@@ -902,7 +912,7 @@ func (a *App) bind() {
 				ov.ToastFor("ok", "Replay saved", "Example notice", IndicatorMillis(a.settings, "ok"))
 			case a.settings.OverlayStyle == "cards":
 				ov.ToastFor("rec", "Recording started", "Example notice", IndicatorMillis(a.settings, "ok"))
-			case kind == IconReplay || kind == IconRecStart || kind == IconRecStop:
+			case kind == IconReplay || kind == IconRecStart || kind == IconRecStop || kind == IconShot:
 				a.showIcon(kind)
 			}
 		})

@@ -91,6 +91,7 @@ type Engine struct {
 	failures  int
 
 	finalizing int
+	shooting   bool // a screenshot is being taken
 	msg        string
 	errMsg     string
 	clips      []Clip

@@ -19,7 +19,7 @@ const (
 )
 
 // PadActions in the order the UI lists them.
-var PadActions = []string{"save", "record", "toggle"}
+var PadActions = []string{"save", "record", "toggle", "shot"}
 
 // Button names, in the order the UI shows them.
 var (

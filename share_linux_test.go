@@ -78,6 +78,7 @@ type fakeDiscord struct {
 	posts    int
 	gotSize  int64
 	gotName  string
+	gotType  string
 	gotJSON  map[string]interface{}
 	limit429 int // reply 429 this many times first
 	maxBytes int64
@@ -119,7 +120,7 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 			return
 		}
 		var size int64
-		var name string
+		var name, ctype string
 		var pj map[string]interface{}
 		for {
 			p, err := mr.NextPart()
@@ -131,12 +132,13 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 				json.NewDecoder(p).Decode(&pj)
 			case "files[0]":
 				name = p.FileName()
+				ctype = p.Header.Get("Content-Type")
 				size, _ = io.Copy(io.Discard, p)
 			}
 		}
 		f.mu.Lock()
 		f.posts++
-		f.gotSize, f.gotName, f.gotJSON = size, name, pj
+		f.gotSize, f.gotName, f.gotJSON, f.gotType = size, name, pj, ctype
 		f.mu.Unlock()
 		io.WriteString(w, `{"id":"333","channel_id":"222"}`)
 	}))

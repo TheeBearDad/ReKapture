@@ -260,6 +260,13 @@ func (s *Sharer) limitBytes() int64 {
 
 // Plan tells the UI what will happen before the user clicks Post.
 func (s *Sharer) Plan(path string, limitMB int) (ShrinkPlan, error) {
+	if IsImage(path) {
+		fi, err := os.Stat(path)
+		if err != nil {
+			return ShrinkPlan{}, errors.New("the screenshot was moved or deleted")
+		}
+		return PlanImage(fi.Size(), s.limitFor(limitMB)), nil
+	}
 	info, err := ProbeClip(s.FFmpeg, path, s.Command)
 	if err != nil {
 		return ShrinkPlan{}, err
@@ -303,6 +310,9 @@ func shareName(src string) string {
 // original when it already fits and plays). made reports whether out is a
 // new file the caller owns.
 func (s *Sharer) prepare(ctx context.Context, src string, limit int64, dir string, progress func(float64)) (out string, made bool, err error) {
+	if IsImage(src) {
+		return s.prepareImage(ctx, src, limit, dir, progress)
+	}
 	info, err := ProbeClip(s.FFmpeg, src, s.Command)
 	if err != nil {
 		return "", false, err
@@ -479,7 +489,7 @@ func postToWebhook(ctx context.Context, hook, file, name, message string, progre
 		pw.Write(pj)
 		h := textproto.MIMEHeader{}
 		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="files[0]"; filename="%s"`, strings.ReplaceAll(name, `"`, "")))
-		h.Set("Content-Type", "video/mp4")
+		h.Set("Content-Type", mediaType(name))
 		mw.CreatePart(h)
 		boundary := mw.Boundary()
 		fmt.Fprintf(&tail, "\r\n--%s--\r\n", boundary)
@@ -556,4 +566,72 @@ func messageLink(r ShareResult, w Webhook) string {
 		return fmt.Sprintf("https://discord.com/channels/%s/%s", guild, channel)
 	}
 	return ""
+}
+
+// mediaType is the upload's content type, from its file name.
+func mediaType(name string) string {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	}
+	return "video/mp4"
+}
+
+// PlanImage decides how a screenshot is shared: as is when it fits, else
+// as a high-quality JPG (a 4K PNG can pass Discord's free 10 MB limit).
+func PlanImage(size, limitBytes int64) ShrinkPlan {
+	if size <= int64(float64(limitBytes)*0.97) {
+		return ShrinkPlan{Summary: fmt.Sprintf("Posts as is (%.1f MB).", float64(size)/(1<<20))}
+	}
+	return ShrinkPlan{Encode: true, Summary: "Too big to post as is, so it's sent as a high-quality JPG."}
+}
+
+// ImageShrinkArgs converts a screenshot to JPG, at full size when
+// maxWidth is 0, else no wider than maxWidth.
+func ImageShrinkArgs(src, out string, maxWidth, q int) []string {
+	vf := "format=yuvj444p"
+	if maxWidth > 0 {
+		vf = fmt.Sprintf("scale='min(%d,iw)':-2:flags=lanczos,", maxWidth) + vf
+	}
+	return []string{"-hide_banner", "-loglevel", "error", "-y", "-i", src, "-frames:v", "1",
+		"-vf", vf, "-c:v", "mjpeg", "-q:v", fmt.Sprint(q), "-update", "1", "-f", "image2", out}
+}
+
+func (s *Sharer) prepareImage(ctx context.Context, src string, limit int64, dir string, progress func(float64)) (string, bool, error) {
+	fi, err := os.Stat(src)
+	if err != nil {
+		return "", false, errors.New("the screenshot was moved or deleted")
+	}
+	if !PlanImage(fi.Size(), limit).Encode {
+		progress(1)
+		return src, false, nil
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", false, err
+	}
+	out := filepath.Join(dir, sanitizeName(strings.TrimSuffix(filepath.Base(src), filepath.Ext(src)))+".jpg")
+	steps := []struct{ w, q int }{{0, 2}, {0, 4}, {2560, 3}, {1920, 3}, {1280, 4}}
+	for i, st := range steps {
+		if ctx.Err() != nil {
+			os.Remove(out)
+			return "", false, ErrCanceled
+		}
+		cmd := s.Command(s.FFmpeg, ImageShrinkArgs(src, out, st.w, st.q)...)
+		if b, err := runWithContext(ctx, cmd); err != nil {
+			os.Remove(out)
+			if ctx.Err() != nil {
+				return "", false, ErrCanceled
+			}
+			return "", false, fmt.Errorf("couldn't convert the screenshot: %s", lastLine(string(b)))
+		}
+		progress(float64(i+1) / float64(len(steps)))
+		if o, e := os.Stat(out); e == nil && o.Size() <= limit {
+			progress(1)
+			return out, true, nil
+		}
+	}
+	os.Remove(out)
+	return "", false, errors.New("the screenshot is too big to post, even made smaller")
 }

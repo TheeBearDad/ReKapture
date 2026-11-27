@@ -57,8 +57,12 @@ type Settings struct {
 	HotkeySave    Hotkey `json:"hotkeySave"`
 	HotkeyRecord  Hotkey `json:"hotkeyRecord"`
 	HotkeyToggle  Hotkey `json:"hotkeyToggle"`
+	HotkeyShot    Hotkey `json:"hotkeyShot"`
 
-	// Controller shortcuts: action ("save" | "record" | "toggle") -> buttons.
+	// Screenshots: "png" (lossless, full quality) | "jpg" (smaller files)
+	ScreenshotFormat string `json:"screenshotFormat"`
+
+	// Controller shortcuts: action ("save" | "record" | "toggle" | "shot") -> buttons.
 	PadEnabled    bool                `json:"padEnabled"`
 	PadHold       bool                `json:"padHold"` // buttons must be held half a second
 	PadXbox       map[string][]string `json:"padXbox"`
@@ -110,6 +114,7 @@ const (
 	vkF9     = 0x78
 	vkF10    = 0x79
 	vkX      = 0x58
+	vkF1     = 0x70
 	modAlt   = 0x1
 	modCtrl  = 0x2
 	modShift = 0x4
@@ -149,6 +154,8 @@ func DefaultSettings(videosDir string) Settings {
 		PadXbox:           map[string][]string{"save": {"View", "Menu"}},
 		PadPS:             map[string][]string{"save": {"Create", "Options"}},
 		HotkeyToggle:      Hotkey{Mods: modAlt | modShift, Key: vkX},
+		HotkeyShot:        Hotkey{Mods: modAlt | modShift, Key: vkF1},
+		ScreenshotFormat:  "png",
 		OverlayToasts:     true,
 		OverlayRec:        true,
 		OverlayCorner:     "tr",
@@ -271,6 +278,10 @@ func (s *Settings) Normalize(def Settings) {
 	if s.HotkeyToggle.Key == 0 {
 		s.HotkeyToggle = def.HotkeyToggle
 	}
+	if s.HotkeyShot.Key == 0 {
+		s.HotkeyShot = def.HotkeyShot
+	}
+	s.ScreenshotFormat = oneOf(s.ScreenshotFormat, []string{"png", "jpg"}, "png")
 }
 
 func normalizePad(family string, in map[string][]string) map[string][]string {

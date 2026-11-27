@@ -106,7 +106,7 @@ h2{font:600 16px/1.2 var(--fc);margin:0 0 3px;letter-spacing:.2px}
 .section-head{display:flex;align-items:baseline;justify-content:space-between;margin:30px 0 10px}
 .library{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;align-items:start}
 .viewer{position:relative;background:#000;border-radius:6px;aspect-ratio:16/9;display:grid;place-items:center;overflow:hidden}
-.viewer video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
+.viewer video,.viewer img{width:100%;height:100%;display:block;background:#000;object-fit:contain}
 .viewer-note{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:var(--muted);font-size:14px;pointer-events:none}
 .viewer-note[data-busy]::before{content:"";width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--green);animation:spin 1s linear infinite;margin:0 auto 10px;display:block}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -339,6 +339,7 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
         <div>
           <div class="viewer">
             <video id="player" controls preload="metadata" playsinline disablepictureinpicture></video>
+            <img id="shot" alt="" hidden>
             <div class="viewer-note" id="viewerNote">Saved clips play here.</div>
           </div>
           <div class="viewer-info" id="viewerInfo" hidden>
@@ -489,10 +490,19 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
         </div>
       </div>
       <div class="group">
-        <div><h2>Save clips to</h2><p class="sub">Replays and recordings both go here.</p></div>
+        <div><h2>Save clips to</h2><p class="sub">Replays, recordings and screenshots all go here.</p></div>
         <div class="ctl">
           <div class="row"><span class="path" id="outPath"></span><button class="btn small" id="browse">Change folder</button></div>
           <div class="toggle-row"><div>Make a folder for each game<p class="hint">Named after the game you're playing.</p></div><button class="switch" role="switch" data-k="folderPerGame" aria-label="Make a folder for each game"></button></div>
+        </div>
+      </div>
+      <div class="group">
+        <div><h2>Screenshots</h2><p class="sub">A full-resolution picture of the screen your game is on, exactly as you see it, including other apps' overlays. Works even when Instant Replay is off.</p></div>
+        <div class="ctl">
+          <div class="row"><label class="l">File type</label><div class="seg" data-k="screenshotFormat"><button data-v="png">PNG</button><button data-v="jpg">JPG</button></div></div>
+          <p class="hint" data-show="s.screenshotFormat==='png'">Lossless, pixel for pixel. A 4K screenshot is usually 10 to 25 MB.</p>
+          <p class="hint" data-show="s.screenshotFormat==='jpg'">Top quality JPG, about a quarter the size of PNG. Easier to share.</p>
+          <p class="hint" id="shotKeys"></p>
         </div>
       </div>
     </section>
@@ -500,13 +510,14 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
     <!-- KEYS -->
     <section class="page" id="p-keys" aria-labelledby="h-keys">
       <h1 id="h-keys">Shortcuts &amp; overlay</h1>
-      <p class="lede">Shortcuts work everywhere, even in full-screen games. The overlay is left out of your recordings.</p>
+      <p class="lede">Shortcuts work everywhere, even in full-screen games. The overlay is left out of your recordings and screenshots.</p>
       <div class="group">
         <div><h2>Shortcuts</h2><p class="sub">Click one, then press the new keys. Esc cancels.</p></div>
         <div class="ctl">
           <div class="hk"><span>Save replay</span><button class="k" data-hk="hotkeySave"></button></div>
           <div class="hk"><span>Start or stop recording</span><button class="k" data-hk="hotkeyRecord"></button></div>
           <div class="hk"><span>Turn Instant Replay on or off</span><button class="k" data-hk="hotkeyToggle"></button></div>
+          <div class="hk"><span>Take a screenshot</span><button class="k" data-hk="hotkeyShot"></button></div>
           <p class="hint" id="hkErr" style="color:var(--amber)"></p>
         </div>
       </div>
@@ -520,6 +531,7 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
             <div class="padrow" role="row"><span role="rowheader">Save replay</span><button class="padk" data-pad="xbox" data-act="save"></button><button class="padk" data-pad="ps" data-act="save"></button></div>
             <div class="padrow" role="row"><span role="rowheader">Start or stop recording</span><button class="padk" data-pad="xbox" data-act="record"></button><button class="padk" data-pad="ps" data-act="record"></button></div>
             <div class="padrow" role="row"><span role="rowheader">Turn Instant Replay on or off</span><button class="padk" data-pad="xbox" data-act="toggle"></button><button class="padk" data-pad="ps" data-act="toggle"></button></div>
+            <div class="padrow" role="row"><span role="rowheader">Take a screenshot</span><button class="padk" data-pad="xbox" data-act="shot"></button><button class="padk" data-pad="ps" data-act="shot"></button></div>
           </div>
           <p class="hint" id="padConflict" data-show="s.padEnabled" style="color:var(--amber)"></p>
           <p class="hint" data-show="s.padEnabled">Click a shortcut, then press the buttons together and let go. Esc cancels, Delete clears it.</p>
@@ -527,11 +539,11 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
         </div>
       </div>
       <div class="group">
-        <div><h2>Overlay</h2><p class="sub">What shows over your game when you save a replay or start and stop recording. It's never in your clips.</p></div>
+        <div><h2>Overlay</h2><p class="sub">What shows over your game when you save a replay, take a screenshot, or start and stop recording. It's never in your clips or screenshots.</p></div>
         <div class="ctl">
           <div class="toggle-row"><div>Show notices over games</div><button class="switch" role="switch" data-k="overlayToasts" aria-label="Show notices over games"></button></div>
           <div class="row" data-show="s.overlayToasts"><label class="l">Style</label><div class="seg" data-k="overlayStyle"><button data-v="icons">Small icons</button><button data-v="cards">Text notices</button></div></div>
-          <p class="hint" data-show="s.overlayToasts&&s.overlayStyle==='icons'">A rewind icon when a replay is saved, a dot when recording starts, and a stop icon when it ends. Problems still show a short text notice.</p>
+          <p class="hint" data-show="s.overlayToasts&&s.overlayStyle==='icons'">A rewind icon when a replay is saved, a camera for a screenshot, a dot when recording starts, and a stop icon when it ends. Problems still show a short text notice.</p>
           <div class="row" data-show="s.overlayToasts"><label class="l">Screen corner</label><div class="corners" data-k="overlayCorner"><button data-v="tl" aria-label="Top left"></button><button data-v="tr" aria-label="Top right"></button><button data-v="bl" aria-label="Bottom left"></button><button data-v="br" aria-label="Bottom right"></button></div></div>
           <div class="row" data-show="s.overlayToasts"><label class="l">Show for</label>
             <div class="seg" id="ovSecs" role="group" aria-label="How long notices stay on screen"><button data-sec="1">1 second</button><button data-sec="3">3 seconds</button><button data-sec="5">5 seconds</button><button data-sec="custom">Custom</button></div>
@@ -541,7 +553,7 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
           <div class="icopt" data-show="s.overlayToasts&&s.overlayStyle==='icons'">
             <div class="icprev" id="prevReplay" aria-hidden="true"></div>
             <div class="icset">
-              <div class="ichead"><b>Replay saved</b><button class="btn small" data-preview="replay">Show on screen</button></div>
+              <div class="ichead"><b>Replay saved and screenshot taken</b><button class="btn small" data-preview="replay">Show on screen</button></div>
               <div class="swatches" data-color="replayIconColor" role="group" aria-label="Replay icon color"></div>
               <div class="row"><label class="l">Opacity</label><input type="range" data-k="replayIconOpacity" min="10" max="100" step="5" aria-label="Replay icon opacity"><span class="val" id="v-ropac"></span></div>
             </div>
@@ -745,12 +757,13 @@ if(!native){
   window.glPadRecord=async fam=>{ if(!fam) return; const seq=fam==="xbox"?[["View"],["View","Menu"]]:[["Create"],["Create","Options"]];
     seq.forEach((b,i)=>setTimeout(()=>window.__glPadLive({family:fam,buttons:b,done:false}),300+i*300)); setTimeout(()=>window.__glPadLive({family:fam,buttons:seq[1],done:true}),1100); };
   window.glPreviewIndicator=async k=>flash("Shown in the "+({tl:"top left",tr:"top right",bl:"bottom left",br:"bottom right"}[S.overlayCorner])+" corner for "+S.overlaySeconds+" s");
-  const mk=(o)=>Object.assign({padEnabled:true,padHold:false,padXbox:{save:["View","Menu"],record:[],toggle:[]},padPS:{save:["Create","Options"],record:["L1","Touchpad"],toggle:[]},overlayStyle:"icons",overlaySeconds:3,overlaySize:"medium",replayIconColor:"#76B900",replayIconOpacity:90,recDotColor:"#E5484D",recDotOpacity:90,captureMode:"auto",autoTarget:"window",discordAudio:"separate",replayWhen:"always",autoUpdate:true,games:[{exe:"Cyberpunk2077.exe",name:"Cyberpunk 2077",isGame:true},{exe:"cs2.exe",name:"Counter-Strike 2",isGame:true},{exe:"Photos.exe",name:"Photos",isGame:false}],monitorId:"\\\\.\\DISPLAY1",windowExe:"",showCursor:true,resolution:"native",customWidth:1920,customHeight:1080,aspect:"source",aspectFit:"fit",fps:60,codec:"h264",rateControl:"vbr",bitrateMbps:50,cq:23,preset:5,container:"mp4",systemAudio:true,systemDeviceId:"",mic:true,micDeviceId:"",audioTracks:"both",audioKbps:192,replayEnabled:true,replaySeconds:120,outputDir:"C:\\Users\\Tyler\\Videos\\ReKapture",folderPerGame:true,hotkeySave:{mods:5,key:121},hotkeyRecord:{mods:5,key:120},hotkeyToggle:{mods:5,key:88},overlayToasts:true,overlayRec:true,overlayCorner:"tr",startWithWindows:false,startMinimized:false,accent:"#76B900",discordMB:20,shareGameName:true,webhooks:[],clipboardMB:20,shareMode:"copy"},o);
+  const mk=(o)=>Object.assign({padEnabled:true,padHold:false,padXbox:{save:["View","Menu"],record:[],toggle:[],shot:[]},padPS:{save:["Create","Options"],record:["L1","Touchpad"],toggle:[],shot:["Touchpad","Options"]},screenshotFormat:"png",hotkeyShot:{mods:5,key:112},overlayStyle:"icons",overlaySeconds:3,overlaySize:"medium",replayIconColor:"#76B900",replayIconOpacity:90,recDotColor:"#E5484D",recDotOpacity:90,captureMode:"auto",autoTarget:"window",discordAudio:"separate",replayWhen:"always",autoUpdate:true,games:[{exe:"Cyberpunk2077.exe",name:"Cyberpunk 2077",isGame:true},{exe:"cs2.exe",name:"Counter-Strike 2",isGame:true},{exe:"Photos.exe",name:"Photos",isGame:false}],monitorId:"\\\\.\\DISPLAY1",windowExe:"",showCursor:true,resolution:"native",customWidth:1920,customHeight:1080,aspect:"source",aspectFit:"fit",fps:60,codec:"h264",rateControl:"vbr",bitrateMbps:50,cq:23,preset:5,container:"mp4",systemAudio:true,systemDeviceId:"",mic:true,micDeviceId:"",audioTracks:"both",audioKbps:192,replayEnabled:true,replaySeconds:120,outputDir:"C:\\Users\\Tyler\\Videos\\ReKapture",folderPerGame:true,hotkeySave:{mods:5,key:121},hotkeyRecord:{mods:5,key:120},hotkeyToggle:{mods:5,key:88},overlayToasts:true,overlayRec:true,overlayCorner:"tr",startWithWindows:false,startMinimized:false,accent:"#76B900",discordMB:20,shareGameName:true,webhooks:[],clipboardMB:20,shareMode:"copy"},o);
   const mock={settings:mk({}),gpu:"NVIDIA GeForce RTX 5080",version:"1.0.0",pads:["Xbox controller","DualSense (Bluetooth)"],nvenc:{checked:true,h264:true,hevc:true,av1:true},
     monitors:[{id:"\\\\.\\DISPLAY1",name:"Display 1 — 2560×1440 @ 240 Hz (main)",width:2560,height:1440},{id:"\\\\.\\DISPLAY2",name:"Display 2 — 1920×1080 @ 60 Hz",width:1920,height:1080}],
     windows:[{exe:"cs2.exe",title:"Counter-Strike 2"},{exe:"FortniteClient-Win64-Shipping.exe",title:"Fortnite"}],
     outputs:[{id:"o1",name:"Speakers (Realtek(R) Audio)"},{id:"o2",name:"Headphones (Arctis Nova 7)"}],inputs:[{id:"i1",name:"Microphone (Arctis Nova 7)"}],hotkeyErrors:"",
     status:{state:"buffering",replayOn:true,recording:false,bufferSeconds:84,video:"HEVC, 2560×1440, 60 fps, 50 Mbps VBR",source:"Display 1 — 2560×1440 @ 240 Hz (main)",clips:[
+      {path:"/tmp/gl-mock/shot1.png",name:"Cyberpunk 2077 2026-11-04 06-20-11 Screenshot.png",kind:"Screenshot",sizeMB:14.2,when:"06:20"},
       {path:"/tmp/gl-mock/clip1.webm",name:"Cyberpunk 2077 2026-11-04 06-18-24 Replay.mp4",kind:"Replay",sizeMB:19,when:"06:18"},
       {path:"/tmp/gl-mock/clip2.webm",name:"Cyberpunk 2077 2026-11-04 06-18-05 Replay.mp4",kind:"Replay",sizeMB:57,when:"06:18"},
       {path:"/tmp/gl-mock/clip3.webm",name:"Counter-Strike 2 2026-11-03 21-14-08 Recording.mp4",kind:"Recording",sizeMB:2310,when:"Nov 3, 21:14"},
@@ -838,6 +851,10 @@ const ICON_COLORS={replayIconColor:[["#76B900","Green"],["#E5484D","Red"],["#0A7
 function iconSVG(kind,hex,op){
   const m=(c,t,to)=>{ const n=parseInt(c.slice(1),16),r=n>>16,g=n>>8&255,b=n&255,f=x=>Math.round(x+(to-x)*t); return `rgb(${f(r)},${f(g)},${f(b)})`; };
   const o=(op||100)/100;
+  if(kind==="shot") return `<svg viewBox="0 0 100 100" style="opacity:${o}"><circle cx="50" cy="54" r="45" fill="#000" opacity=".35"/><circle cx="50" cy="50" r="45" fill="${hex}"/>
+    <g transform="translate(0,3)" fill="${m(hex,.35,0)}"><rect x="25.5" y="35.5" width="49" height="33" rx="5"/><rect x="38.5" y="27" width="23" height="13" rx="3"/></g>
+    <g fill="${m(hex,.72,255)}"><rect x="25.5" y="35.5" width="49" height="33" rx="5"/><rect x="38.5" y="27" width="23" height="13" rx="3"/></g>
+    <circle cx="50" cy="52.5" r="12" fill="${m(hex,.35,0)}"/><circle cx="50" cy="52.5" r="8" fill="${m(hex,.72,255)}"/><circle cx="67" cy="42" r="2.4" fill="${m(hex,.35,0)}"/></svg>`;
   if(kind==="replay") return `<svg viewBox="0 0 100 100" style="opacity:${o}"><circle cx="50" cy="54" r="45" fill="#000" opacity=".35"/><circle cx="50" cy="50" r="45" fill="${hex}"/>
     <g fill="${m(hex,.35,0)}" transform="translate(2.2,4)"><path d="M19.4 50 46.4 26.6v46.8z"/><path d="M46.4 50 73.4 26.6v46.8z"/></g>
     <g fill="${m(hex,.68,255)}"><path d="M19.4 50 46.4 26.6v46.8z"/><path d="M46.4 50 73.4 26.6v46.8z"/></g></svg>`;
@@ -849,7 +866,7 @@ function renderOverlayOpts(){
     box.innerHTML=list.map(([h,n])=>`<button class="swatch" style="background:${h}" data-hex="${h}" aria-label="${n}" aria-pressed="${h===cur}"></button>`).join("")
       +`<label class="swatch pick" aria-pressed="${!known}" title="Custom color"><input type="color" value="${cur.toLowerCase()}" aria-label="Custom color"></label>`;
   });
-  $("#prevReplay").innerHTML=iconSVG("replay",S.replayIconColor,S.replayIconOpacity);
+  $("#prevReplay").innerHTML=iconSVG("replay",S.replayIconColor,S.replayIconOpacity)+iconSVG("shot",S.replayIconColor,S.replayIconOpacity);
   $("#prevRec").innerHTML=iconSVG("rec",S.recDotColor,S.recDotOpacity);
   $("#v-ropac").textContent=S.replayIconOpacity+"%"; $("#v-dopac").textContent=S.recDotOpacity+"%";
   const secs=S.overlaySeconds, preset=[1,3,5].includes(secs);
@@ -876,7 +893,7 @@ function renderPads(){
   $("#padStatus").textContent = PADS.length? "Connected: "+PADS.join(", ") : "No controller found. Turn one on or plug it in.";
   const clash=[];
   for(const fam of ["xbox","ps"]){ const m=S[fam==="xbox"?"padXbox":"padPS"]||{}, seen={};
-    for(const act of ["save","record","toggle"]){ const k=(m[act]||[]).slice().sort().join("+"); if(!k) continue; if(seen[k]) clash.push(`${PAD_NAME[fam]}: two shortcuts use ${(m[act]||[]).join(" + ")}`); seen[k]=1; } }
+    for(const act of ["save","record","toggle","shot"]){ const k=(m[act]||[]).slice().sort().join("+"); if(!k) continue; if(seen[k]) clash.push(`${PAD_NAME[fam]}: two shortcuts use ${(m[act]||[]).join(" + ")}`); seen[k]=1; } }
   $("#padConflict").textContent=clash.join(". "); $("#padConflict").style.display=clash.length?"":"none";
 }
 function render(){
@@ -894,6 +911,8 @@ function render(){
   $("#v-bitrate").textContent=S.bitrateMbps+" Mbps"; $("#v-cap").textContent=S.bitrateMbps+" Mbps";
   $("#v-cq").textContent=S.cq+(S.cq<=18?"  near-lossless":S.cq<=26?"  great":S.cq<=34?"  good":"  small files");
   $("#v-preset").textContent=PRESET_NAMES[S.preset];
+  { const pads=[S.padXbox&&S.padXbox.shot, S.padPS&&S.padPS.shot].filter(b=>b&&b.length).map(b=>b.join(" + "));
+    $("#shotKeys").textContent=`Take one with ${hkText(S.hotkeyShot)}${S.padEnabled&&pads.length? " or "+pads.join(" / ")+" on a controller" : ""}. Change it under Shortcuts.`; }
   const g=geometry(); $("#outRes").textContent = g? `${g[0]} × ${g[1]} at ${S.fps} fps` : (S.captureMode==="auto"? `the game window's size at ${S.fps} fps` : `the window's own size at ${S.fps} fps`);
   const src=audioSources(), nSrc=src.length;
   const mbMin=S.rateControl==="cq"? null : S.bitrateMbps*60/8 + S.audioKbps*60/8/1000*(nSrc<2? nSrc : S.audioTracks==="both"? nSrc+1 : S.audioTracks==="mixed"? 1 : nSrc);
@@ -1079,22 +1098,28 @@ window.__glStatus=renderStatus;
 
 /* ---------- clip library ---------- */
 let MEDIA="", cur=null, picked=false;
-const NAME_RE=/^(.*) (\d{4})-(\d{2})-(\d{2}) (\d{2})-(\d{2})-(\d{2}) (Replay|Recording)( \(\d+\))?(\.\w+)$/;
+const NAME_RE=/^(.*) (\d{4})-(\d{2})-(\d{2}) (\d{2})-(\d{2})-(\d{2}) (Replay|Recording|Screenshot)( \(\d+\))?(\.\w+)$/;
 function parseName(k){ const m=NAME_RE.exec(k.name); return m? {title:m[1], kind:m[8]} : {title:k.name.replace(/\.\w+$/,""), kind:k.kind}; }
 function mediaURL(kind,p){ if(MEDIA) return `${MEDIA}/${kind}?p=${encodeURIComponent(p)}`; return (kind==="thumb"||kind==="strip")? (window.__mockThumb||"") : p; }
 function note(t,busy){ const n=$("#viewerNote"); n.textContent=t||""; n.hidden=!t; n.toggleAttribute("data-busy",!!busy); }
+const isShot=c=>/\.(png|jpe?g)$/i.test(c.path||c.name||"");
 function showClip(c){
-  const v=$("#player"); cur=c;
-  if(!c){ v.removeAttribute("src"); v.load(); v.hidden=true; $("#viewerInfo").hidden=true; note("Saved clips play here."); markCurrent(); return; }
+  const v=$("#player"), img=$("#shot"); cur=c;
+  const still=!!c&&isShot(c);
+  if(!c||still){ v.pause(); v.removeAttribute("src"); v.removeAttribute("poster"); v.load(); v.hidden=true; }
+  img.hidden=!still; if(!still) img.removeAttribute("src");
+  if(!c){ $("#viewerInfo").hidden=true; note("Saved clips play here."); markCurrent(); return; }
   const n=parseName(c);
-  v.hidden=false; v.dataset.stage="orig"; v.poster=mediaURL("thumb",c.path); v.src=mediaURL("file",c.path); note("");
+  $("#viEdit").hidden=still; $("#viPlay").textContent=still? "Open in viewer" : "Open in player";
+  if(still){ note("Loading…",true); img.alt=`Screenshot: ${n.title}`; img.onload=()=>note(""); img.onerror=()=>note("This screenshot can't be shown here. Use Open in viewer."); img.src=mediaURL("file",c.path); }
+  else { v.hidden=false; v.dataset.stage="orig"; v.poster=mediaURL("thumb",c.path); v.src=mediaURL("file",c.path); note(""); }
   $("#viewerInfo").hidden=false; $("#viName").textContent=n.title; $("#viName").title=c.path;
   $("#viMeta").textContent=`${n.kind}, ${c.when}, ${size(c.sizeMB)}`;
   markCurrent();
 }
 function markCurrent(){ $$("#clips .clip").forEach(b=>b.setAttribute("aria-current", !!cur && b.dataset.path===cur.path)); }
 function playerFallback(){
-  const v=$("#player"); if(!cur) return;
+  const v=$("#player"); if(!cur||isShot(cur)) return;
   if(v.dataset.stage==="orig" && MEDIA){ v.dataset.stage="preview"; note("Making a preview copy…", true); v.src=mediaURL("preview",cur.path); }
   else { note("This clip can't play here. Use Open in player."); }
 }
@@ -1108,7 +1133,7 @@ function renderClips(clips){
   c.innerHTML = clips.length? clips.map(k=>{ const n=parseName(k); return `<button class="clip" role="listitem" data-path="${esc(k.path)}" title="${esc(k.name)}">
       <span class="thumb"><img loading="lazy" alt="" src="${esc(mediaURL("thumb",k.path))}" onerror="this.remove()"><i>${esc(n.kind)}</i></span>
       <span style="min-width:0"><span class="n" style="display:block">${esc(n.title)}</span><span class="m" style="display:block">${esc(k.when)}, ${size(k.sizeMB)}</span></span></button>`; }).join("")
-    : `<div class="empty">Nothing saved yet. Press ${esc(hkText(S&&S.hotkeySave))} in a game to save a replay.</div>`;
+    : `<div class="empty">Nothing saved yet. Press ${esc(hkText(S&&S.hotkeySave))} in a game to save a replay, or ${esc(hkText(S&&S.hotkeyShot))} for a screenshot.</div>`;
   const v=$("#player");
   const stillThere = cur && clips.some(k=>k.path===cur.path);
   if(!clips.length) showClip(null);
