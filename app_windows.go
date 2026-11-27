@@ -28,7 +28,7 @@ import (
 //go:embed ui/index.html
 var indexHTML string
 
-const appVersion = "2.8.2"
+const appVersion = "2.9.0"
 
 const (
 	wmClose     = 0x0010
@@ -201,6 +201,7 @@ func main() {
 			a.wv.Dispatch(func() { a.evalJSON("__glPads", names) })
 		})
 	a.pads.Apply(s)
+	a.startDock(s)
 	a.discordMB.Store(int32(s.DiscordMB))
 	a.sharer = &Sharer{FFmpeg: ffmpeg, Command: plat.Command, TempDir: filepath.Join(localDataDir(), "share"),
 		ClipDir: filepath.Join(localDataDir(), "clipboard"),
@@ -317,6 +318,9 @@ func (a *App) hostProc(hwnd, msg, wp, lp uintptr) uintptr {
 		case 4:
 			go a.engine.Screenshot()
 		}
+		return 0
+	case msg == wmTimer && wp == dockTimerID:
+		dk.tick()
 		return 0
 	case msg == wmTray:
 		switch lp & 0xFFFF {
@@ -542,6 +546,7 @@ func (a *App) showIcon(icon string) {
 }
 
 func (a *App) onStatus(st Status) {
+	dk.SetStatus(st)
 	a.lastSt.Store(st)
 	a.statusOnce.Do(func() {
 		a.status = &coalescer{
@@ -596,6 +601,31 @@ func clockText(s int) string {
 
 // onEngineSettings: the engine added a detected game to the games list.
 // Save it and show it in the UI (on the UI thread, like every settings change).
+// startDock sets up the quick bar (on-screen buttons). Its callbacks run
+// on the UI thread, which owns a.settings.
+func (a *App) startDock(s Settings) {
+	dk.onAction = func(act string) {
+		log.Printf("quick bar: %s", dockActionName(act))
+		a.onPadAction(act)
+	}
+	saveDock := func(change func(*Settings)) {
+		change(&a.settings)
+		if err := SaveSettings(a.setPath, a.settings); err != nil {
+			log.Printf("couldn't save the quick bar position: %v", err)
+		}
+		a.evalJSON("__glSettings", a.settings)
+	}
+	dk.onPin = func(pinned bool) { saveDock(func(s *Settings) { s.DockPinned = pinned }) }
+	dk.onMoved = func(fx, fy float64) {
+		saveDock(func(s *Settings) { s.DockCorner, s.DockX, s.DockY = "custom", fx, fy })
+	}
+	dk.onAntiCheat = func(name string) {
+		a.wv.Dispatch(func() { a.evalJSON("__glDockAC", name) })
+	}
+	dk.Apply(s)
+	dk.start(a.host)
+}
+
 func (a *App) onEngineSettings(s Settings) {
 	a.wv.Dispatch(func() {
 		a.settings.Games = s.Games
@@ -691,6 +721,8 @@ func (a *App) bind() {
 		return m
 	})
 	w.Bind("glRefreshSources", func() map[string]interface{} { return a.sources() })
+	w.Bind("glDockAntiCheat", func() string { return dk.AntiCheat() })
+	w.Bind("glDockPeek", func() { dk.Peek(5 * time.Second) })
 	w.Bind("glSaveSettings", func(s Settings) map[string]interface{} {
 		s.Normalize(DefaultSettings(videosDir()))
 		s.ReplayEnabled = a.engine.ReplayOn()
@@ -719,6 +751,7 @@ func (a *App) bind() {
 		}
 		a.settings = s
 		a.pads.Apply(s)
+		dk.Apply(s)
 		a.outDir.Store(s.OutputDir)
 		a.shotDir.Store(s.ScreenshotDir)
 		a.discordMB.Store(int32(s.DiscordMB))

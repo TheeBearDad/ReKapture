@@ -81,6 +81,17 @@ type Settings struct {
 	RecDotColor       string  `json:"recDotColor"`
 	RecDotOpacity     int     `json:"recDotOpacity"`
 	ShotIconColor     string  `json:"shotIconColor"`
+
+	// Quick bar: on-screen Save replay / Screenshot / Record buttons.
+	DockEnabled       bool    `json:"dockEnabled"`
+	DockCorner        string  `json:"dockCorner"` // tl|tr|bl|br|custom
+	DockX             float64 `json:"dockX"`      // custom spot, 0..1 across the free space
+	DockY             float64 `json:"dockY"`
+	DockIdleOpacity   int     `json:"dockIdleOpacity"`  // 0 = invisible until the mouse comes near
+	DockHoverOpacity  int     `json:"dockHoverOpacity"` // when hovered or pinned
+	DockSize          string  `json:"dockSize"`         // small|medium|large
+	DockHideAntiCheat bool    `json:"dockHideAntiCheat"`
+	DockPinned        bool    `json:"dockPinned"` // right-click keeps it visible
 	ShotIconOpacity   int     `json:"shotIconOpacity"`
 	StartWithWindows  bool    `json:"startWithWindows"`
 	StartMinimized    bool    `json:"startMinimized"`
@@ -170,6 +181,13 @@ func DefaultSettings(videosDir string) Settings {
 		RecDotColor:       "#E5484D",
 		RecDotOpacity:     90,
 		ShotIconColor:     "#0A72F0",
+		DockCorner:        "br",
+		DockX:             1,
+		DockY:             1,
+		DockIdleOpacity:   0,
+		DockHoverOpacity:  95,
+		DockSize:          "medium",
+		DockHideAntiCheat: true,
 		ShotIconOpacity:   90,
 		ScreenshotDir:     filepath.Join(PicturesDir(videosDir), "Screenshots"),
 		Accent:            DefaultAccent,
@@ -283,6 +301,17 @@ func (s *Settings) Normalize(def Settings) {
 		s.ShotIconOpacity = def.ShotIconOpacity
 	}
 	s.ShotIconOpacity = clamp(s.ShotIconOpacity, 10, 100)
+	s.DockCorner = oneOf(s.DockCorner, []string{"tl", "tr", "bl", "br", "custom"}, def.DockCorner)
+	s.DockSize = oneOf(s.DockSize, []string{"small", "medium", "large"}, def.DockSize)
+	s.DockIdleOpacity = clamp(s.DockIdleOpacity, 0, 100)
+	if s.DockHoverOpacity == 0 {
+		s.DockHoverOpacity = def.DockHoverOpacity
+	}
+	s.DockHoverOpacity = clamp(s.DockHoverOpacity, 20, 100)
+	if math.IsNaN(s.DockX) || math.IsNaN(s.DockY) {
+		s.DockX, s.DockY = def.DockX, def.DockY
+	}
+	s.DockX, s.DockY = clampF(s.DockX, 0, 1), clampF(s.DockY, 0, 1)
 	s.ReplayIconOpacity = clamp(s.ReplayIconOpacity, 10, 100)
 	s.RecDotOpacity = clamp(s.RecDotOpacity, 10, 100)
 	if s.HotkeySave.Key == 0 {

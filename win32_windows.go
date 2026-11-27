@@ -62,6 +62,7 @@ var (
 	pTrackPopupMenu            = user32.NewProc("TrackPopupMenu")
 	pDestroyMenu               = user32.NewProc("DestroyMenu")
 	pGetCursorPos              = user32.NewProc("GetCursorPos")
+	pGetDpiForMonitor          = windows.NewLazySystemDLL("shcore.dll").NewProc("GetDpiForMonitor")
 	pPostMessageW              = user32.NewProc("PostMessageW")
 	pLoadImageW                = user32.NewProc("LoadImageW")
 	pRegisterWindowMessageW    = user32.NewProc("RegisterWindowMessageW")

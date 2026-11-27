@@ -1,4 +1,4 @@
-ReKapture 2.8
+ReKapture 2.9
 =============
 
 Instant Replay and screen recording for NVIDIA GPUs, with every setting
@@ -22,7 +22,7 @@ INSTALL
 There are two ways to use ReKapture. Pick one.
 
 Installer (recommended)
-1. Run ReKapture-Setup-2.8.2.exe.
+1. Run ReKapture-Setup-2.9.0.exe.
 2. Windows may show "Windows protected your PC" because ReKapture isn't
    code-signed. Click "More info", then "Run anyway".
 3. Follow the steps. ReKapture installs to C:\Program Files (x86)\ReKapture
@@ -189,6 +189,24 @@ Screenshots
   sent as a high-quality JPG.
 - With HDR turned on in Windows, screenshots are saved in standard (SDR)
   color, so very bright highlights can look flatter than on screen.
+
+Quick bar (on-screen buttons)
+- Turn it on under "Shortcuts & overlay" -> Quick bar. It's a small bar with
+  Save replay, Screenshot and Record buttons for the mouse, handy when you
+  play in a window (a capture card or remote play app).
+- By default it's invisible until the mouse comes near its corner. Left-click
+  a button to use it, right-click the bar to keep it on screen (right-click
+  again to let it hide), and drag it by the dots to put it anywhere.
+- Choose its corner, size, and how see-through it is with the mouse away
+  and on it. It's never in your clips or screenshots, and clicking it
+  doesn't take focus away from your game.
+- It needs a visible mouse pointer, so in games that hide the pointer use
+  your hotkeys or controller. Games in exclusive fullscreen can cover it.
+- Anti-cheat: the bar doesn't touch games (no injection, no memory reading).
+  Some anti-cheats look for windows drawn over games, though, so by default
+  the bar goes away completely while Riot Vanguard, Easy Anti-Cheat,
+  BattlEye, FACEIT, EA Javelin, GameGuard, PunkBuster or Anti-Cheat Expert
+  is running.
 
 Controller shortcuts
 - Save replays, record, take screenshots and turn Instant Replay on or off
