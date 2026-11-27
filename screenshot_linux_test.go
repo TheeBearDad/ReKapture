@@ -67,9 +67,12 @@ func TestEngineScreenshot(t *testing.T) {
 			if d := time.Since(start); d > 5*time.Second {
 				t.Errorf("screenshot took %v", d)
 			}
-			shots, _ := filepath.Glob(filepath.Join(s.OutputDir, "*", "*Screenshot."+format))
+			if want := filepath.Join(filepath.Dir(filepath.Dir(s.OutputDir)), "Pictures", "Screenshots"); s.ScreenshotDir != want {
+				t.Errorf("default folder %s, want %s", s.ScreenshotDir, want)
+			}
+			shots, _ := filepath.Glob(filepath.Join(s.ScreenshotDir, "*", "*Screenshot."+format))
 			if len(shots) != 1 {
-				all, _ := filepath.Glob(filepath.Join(s.OutputDir, "*", "*"))
+				all, _ := filepath.Glob(filepath.Join(s.ScreenshotDir, "*", "*"))
 				t.Fatalf("want 1 screenshot, found %v; notes %v", all, fp.notes)
 			}
 			img, got := decodeImage(t, shots[0])
@@ -98,7 +101,10 @@ func TestEngineScreenshot(t *testing.T) {
 			if len(clips) == 0 || clips[0].Kind != "Screenshot" || clips[0].Path != shots[0] {
 				t.Errorf("library: %+v", clips)
 			}
-			if leftover, _ := filepath.Glob(filepath.Join(s.OutputDir, "*", "*.part.*")); len(leftover) != 0 {
+			if clipsDir, _ := filepath.Glob(filepath.Join(s.OutputDir, "*")); len(clipsDir) != 0 {
+				t.Errorf("screenshot went to the clips folder: %v", clipsDir)
+			}
+			if leftover, _ := filepath.Glob(filepath.Join(s.ScreenshotDir, "*", "*.part.*")); len(leftover) != 0 {
 				t.Errorf("temp files left: %v", leftover)
 			}
 		})
@@ -114,7 +120,7 @@ func TestScreenshotFailureAndBusy(t *testing.T) {
 	if !strings.Contains(notes, "warn: Screenshot failed") {
 		t.Errorf("want a failure notice, got %s", notes)
 	}
-	if files, _ := filepath.Glob(filepath.Join(s.OutputDir, "*")); len(files) != 0 {
+	if files, _ := filepath.Glob(filepath.Join(s.ScreenshotDir, "*")); len(files) != 0 {
 		t.Errorf("failed screenshot left files: %v", files)
 	}
 	// A press while one is saving is ignored, not queued.
@@ -137,7 +143,7 @@ func TestScreenshotSettings(t *testing.T) {
 	var old Settings // a settings file from before 2.8.0
 	old.Normalize(d)
 	d.Normalize(DefaultSettings("/v"))
-	if old.ScreenshotFormat != "png" || old.HotkeyShot != d.HotkeyShot {
+	if old.ScreenshotFormat != "png" || old.HotkeyShot != d.HotkeyShot || old.ScreenshotDir != d.ScreenshotDir || old.ShotIconColor != "#0A72F0" || old.ShotIconOpacity != 90 {
 		t.Errorf("upgrade: %+v %+v", old.ScreenshotFormat, old.HotkeyShot)
 	}
 	if got := d.PadXbox["shot"]; got == nil || len(got) != 0 {
@@ -169,13 +175,47 @@ func TestScanClipsScreenshots(t *testing.T) {
 	}
 }
 
+func TestScanLibrary(t *testing.T) {
+	clips, shots := t.TempDir(), t.TempDir()
+	write := func(p string, age time.Duration) {
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, []byte("data"), 0o644)
+		mt := time.Now().Add(-age)
+		os.Chtimes(p, mt, mt)
+	}
+	write(filepath.Join(clips, "Game", "Game 2026-11-27 08-00-00 Replay.mp4"), 3*time.Minute)
+	write(filepath.Join(clips, "Game", "Game 2026-11-27 07-00-00 Screenshot.png"), 4*time.Minute) // saved by 2.8.0
+	write(filepath.Join(shots, "Game", "Game 2026-11-27 10-00-00 Screenshot.png"), time.Minute)
+	write(filepath.Join(shots, "Desktop 2026-11-27 10-05-00 Screenshot (2).jpg"), 2*time.Minute)
+	write(filepath.Join(shots, "Screenshot 2026-11-27 101500.png"), 0) // Windows' own Win+PrtScn
+	write(filepath.Join(shots, "holiday.jpg"), 0)
+	write(filepath.Join(shots, "Game", "Game 2026-11-27 10-06-00 Screenshot.part.png"), 0)
+	got := ScanLibrary(clips, shots, 12)
+	var names []string
+	for _, c := range got {
+		names = append(names, c.Name)
+	}
+	want := "Game 2026-11-27 10-00-00 Screenshot.png|Desktop 2026-11-27 10-05-00 Screenshot (2).jpg|Game 2026-11-27 08-00-00 Replay.mp4|Game 2026-11-27 07-00-00 Screenshot.png"
+	if strings.Join(names, "|") != want {
+		t.Errorf("got  %s\nwant %s", strings.Join(names, "|"), want)
+	}
+	// The same folder for both doesn't list anything twice.
+	if n := len(ScanLibrary(clips, clips, 12)); n != 2 {
+		t.Errorf("same folder twice: %d items", n)
+	}
+	if n := len(ScanLibrary(clips, shots, 2)); n != 2 {
+		t.Errorf("limit: %d", n)
+	}
+}
+
 func TestMediaServerScreenshots(t *testing.T) {
 	root := t.TempDir()
 	shot := filepath.Join(root, "Game 2026-11-27 10-00-00 Screenshot.png")
 	if out, err := exec.Command(testFFmpeg(), "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc2=size=1280x720", "-frames:v", "1", shot).CombinedOutput(); err != nil {
 		t.Fatalf("%v %s", err, out)
 	}
-	m, err := NewMediaServer(testFFmpeg(), t.TempDir(), exec.Command, func() []string { return []string{root} }, func() bool { return false })
+	clipsRoot := t.TempDir() // screenshots live in their own folder, next to the clips folder
+	m, err := NewMediaServer(testFFmpeg(), t.TempDir(), exec.Command, func() []string { return []string{clipsRoot, "", root} }, func() bool { return false })
 	if err != nil {
 		t.Fatal(err)
 	}

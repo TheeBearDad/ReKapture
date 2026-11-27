@@ -167,6 +167,16 @@ func localDataDir() string {
 	return filepath.Join(d, "ReKapture")
 }
 
+func init() {
+	PicturesDir = func(string) string {
+		if p, err := windows.KnownFolderPath(windows.FOLDERID_Pictures, 0); err == nil && p != "" {
+			return p
+		}
+		h, _ := os.UserHomeDir()
+		return filepath.Join(h, "Pictures")
+	}
+}
+
 func videosDir() string {
 	if p, err := windows.KnownFolderPath(windows.FOLDERID_Videos, 0); err == nil && p != "" {
 		return p

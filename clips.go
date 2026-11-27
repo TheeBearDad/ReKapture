@@ -49,47 +49,69 @@ func clipKind(name string) string {
 	return "Video"
 }
 
-// ScanClips lists the newest videos and screenshots in the clips folder (and one level of
-// per-game folders), so the Recent clips list survives restarts.
-func ScanClips(root string, limit int) []Clip {
+// ScanClips lists the newest videos and screenshots in the clips folder (and
+// one level of per-game folders), so the Recent clips list survives restarts.
+func ScanClips(root string, limit int) []Clip { return ScanLibrary(root, "", limit) }
+
+// shotNameRe matches the names ReKapture gives screenshots. The screenshots
+// folder is shared (Windows' own Win+PrtScn pictures go to Pictures\Screenshots
+// too), so only ReKapture's are listed from it.
+var shotNameRe = regexp.MustCompile(`(?i) \d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2} Screenshot( \(\d+\))?\.(png|jpe?g)$`)
+
+// ScanLibrary lists the newest videos and screenshots from the clips folder
+// and the screenshots folder (each with one level of per-game folders).
+func ScanLibrary(clipsDir, shotsDir string, limit int) []Clip {
 	type item struct {
 		path string
 		fi   os.FileInfo
 	}
 	var items []item
-	consider := func(p string, fi os.FileInfo) {
-		// ".part." files are screenshots still being written.
-		if fi.IsDir() || !isMedia(p) || fi.Size() == 0 || strings.Contains(strings.ToLower(fi.Name()), ".part.") {
+	seen := map[string]bool{}
+	scan := func(root string, accept func(name string) bool) {
+		if root == "" {
 			return
 		}
-		items = append(items, item{p, fi})
-	}
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		return nil
-	}
-	for _, en := range entries {
-		p := filepath.Join(root, en.Name())
-		if strings.HasPrefix(en.Name(), ".") {
-			continue // .rekapture-buffer and other hidden folders
+		consider := func(p string, fi os.FileInfo) {
+			key := strings.ToLower(filepath.Clean(p))
+			// ".part." files are screenshots still being written.
+			if seen[key] || fi.IsDir() || !accept(fi.Name()) || fi.Size() == 0 || strings.Contains(strings.ToLower(fi.Name()), ".part.") {
+				return
+			}
+			seen[key] = true
+			items = append(items, item{p, fi})
 		}
-		fi, err := en.Info()
+		entries, err := os.ReadDir(root)
 		if err != nil {
-			continue
+			return
 		}
-		if en.IsDir() {
-			sub, err := os.ReadDir(p)
+		for _, en := range entries {
+			p := filepath.Join(root, en.Name())
+			if strings.HasPrefix(en.Name(), ".") {
+				continue // .rekapture-buffer and other hidden folders
+			}
+			fi, err := en.Info()
 			if err != nil {
 				continue
 			}
-			for _, s := range sub {
-				if sfi, err := s.Info(); err == nil {
-					consider(filepath.Join(p, s.Name()), sfi)
+			if en.IsDir() {
+				sub, err := os.ReadDir(p)
+				if err != nil {
+					continue
 				}
+				for _, s := range sub {
+					if sfi, err := s.Info(); err == nil {
+						consider(filepath.Join(p, s.Name()), sfi)
+					}
+				}
+				continue
 			}
-			continue
+			consider(p, fi)
 		}
-		consider(p, fi)
+	}
+	scan(clipsDir, isMedia) // screenshots from 2.8.0 were saved here
+	scan(shotsDir, func(n string) bool { return shotNameRe.MatchString(n) })
+	if len(items) == 0 {
+		return nil
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].fi.ModTime().After(items[j].fi.ModTime()) })
 	if len(items) > limit {
@@ -195,6 +217,9 @@ func (m *MediaServer) allowed(p string) (string, bool) {
 		return "", false
 	}
 	for _, r := range m.roots() {
+		if strings.TrimSpace(r) == "" {
+			continue // an unset folder must not mean "the current folder"
+		}
 		ra, err := filepath.Abs(r)
 		if err != nil {
 			continue

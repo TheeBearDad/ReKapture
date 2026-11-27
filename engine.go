@@ -119,8 +119,8 @@ func NewEngine(p Platform, ffmpeg string, s Settings, onStatus func(Status), onS
 
 // RefreshClips reloads the Recent clips list from the clips folder.
 func (e *Engine) RefreshClips() {
-	dir := e.Settings().OutputDir
-	clips := ScanClips(dir, 12)
+	s := e.Settings()
+	clips := ScanLibrary(s.OutputDir, s.ScreenshotDir, 12)
 	e.mu.Lock()
 	e.clips = clips
 	e.mu.Unlock()
@@ -148,7 +148,7 @@ func (e *Engine) Apply(s Settings) error {
 	}
 	restart := e.running && VideoChanged(old, s)
 	e.mu.Unlock()
-	if old.OutputDir != s.OutputDir {
+	if old.OutputDir != s.OutputDir || old.ScreenshotDir != s.ScreenshotDir {
 		go e.RefreshClips()
 	}
 	if restart {

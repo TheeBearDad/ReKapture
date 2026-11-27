@@ -103,6 +103,7 @@ func (e *Engine) takeScreenshot(s Settings, name string) (string, error) {
 		return "", err
 	}
 	c.Container = s.ScreenshotFormat
+	c.OutputDir = s.ScreenshotDir
 	out, err := e.clipPath(c, name, "Screenshot", t)
 	if err != nil {
 		return "", err

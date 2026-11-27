@@ -490,15 +490,17 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
         </div>
       </div>
       <div class="group">
-        <div><h2>Save clips to</h2><p class="sub">Replays, recordings and screenshots all go here.</p></div>
+        <div><h2>Save clips to</h2><p class="sub">Replays and recordings go here.</p></div>
         <div class="ctl">
           <div class="row"><span class="path" id="outPath"></span><button class="btn small" id="browse">Change folder</button></div>
-          <div class="toggle-row"><div>Make a folder for each game<p class="hint">Named after the game you're playing.</p></div><button class="switch" role="switch" data-k="folderPerGame" aria-label="Make a folder for each game"></button></div>
+          <div class="toggle-row"><div>Make a folder for each game<p class="hint">Named after the game you're playing. Screenshots are sorted the same way.</p></div><button class="switch" role="switch" data-k="folderPerGame" aria-label="Make a folder for each game"></button></div>
         </div>
       </div>
       <div class="group">
         <div><h2>Screenshots</h2><p class="sub">A full-resolution picture of the screen your game is on, exactly as you see it, including other apps' overlays. Works even when Instant Replay is off.</p></div>
         <div class="ctl">
+          <div class="row"><label class="l">Folder</label></div>
+          <div class="row"><span class="path" id="shotPath"></span><button class="btn small" id="browseShots">Change folder</button><button class="btn small" id="openShots">Open</button></div>
           <div class="row"><label class="l">File type</label><div class="seg" data-k="screenshotFormat"><button data-v="png">PNG</button><button data-v="jpg">JPG</button></div></div>
           <p class="hint" data-show="s.screenshotFormat==='png'">Lossless, pixel for pixel. A 4K screenshot is usually 10 to 25 MB.</p>
           <p class="hint" data-show="s.screenshotFormat==='jpg'">Top quality JPG, about a quarter the size of PNG. Easier to share.</p>
@@ -553,9 +555,17 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(-
           <div class="icopt" data-show="s.overlayToasts&&s.overlayStyle==='icons'">
             <div class="icprev" id="prevReplay" aria-hidden="true"></div>
             <div class="icset">
-              <div class="ichead"><b>Replay saved and screenshot taken</b><button class="btn small" data-preview="replay">Show on screen</button></div>
+              <div class="ichead"><b>Replay saved</b><button class="btn small" data-preview="replay">Show on screen</button></div>
               <div class="swatches" data-color="replayIconColor" role="group" aria-label="Replay icon color"></div>
               <div class="row"><label class="l">Opacity</label><input type="range" data-k="replayIconOpacity" min="10" max="100" step="5" aria-label="Replay icon opacity"><span class="val" id="v-ropac"></span></div>
+            </div>
+          </div>
+          <div class="icopt" data-show="s.overlayToasts&&s.overlayStyle==='icons'">
+            <div class="icprev" id="prevShot" aria-hidden="true"></div>
+            <div class="icset">
+              <div class="ichead"><b>Screenshot taken</b><button class="btn small" data-preview="shot">Show on screen</button></div>
+              <div class="swatches" data-color="shotIconColor" role="group" aria-label="Screenshot icon color"></div>
+              <div class="row"><label class="l">Opacity</label><input type="range" data-k="shotIconOpacity" min="10" max="100" step="5" aria-label="Screenshot icon opacity"><span class="val" id="v-sopac"></span></div>
             </div>
           </div>
           <div class="icopt" data-show="s.overlayToasts&&s.overlayStyle==='icons'">
@@ -757,7 +767,7 @@ if(!native){
   window.glPadRecord=async fam=>{ if(!fam) return; const seq=fam==="xbox"?[["View"],["View","Menu"]]:[["Create"],["Create","Options"]];
     seq.forEach((b,i)=>setTimeout(()=>window.__glPadLive({family:fam,buttons:b,done:false}),300+i*300)); setTimeout(()=>window.__glPadLive({family:fam,buttons:seq[1],done:true}),1100); };
   window.glPreviewIndicator=async k=>flash("Shown in the "+({tl:"top left",tr:"top right",bl:"bottom left",br:"bottom right"}[S.overlayCorner])+" corner for "+S.overlaySeconds+" s");
-  const mk=(o)=>Object.assign({padEnabled:true,padHold:false,padXbox:{save:["View","Menu"],record:[],toggle:[],shot:[]},padPS:{save:["Create","Options"],record:["L1","Touchpad"],toggle:[],shot:["Touchpad","Options"]},screenshotFormat:"png",hotkeyShot:{mods:5,key:112},overlayStyle:"icons",overlaySeconds:3,overlaySize:"medium",replayIconColor:"#76B900",replayIconOpacity:90,recDotColor:"#E5484D",recDotOpacity:90,captureMode:"auto",autoTarget:"window",discordAudio:"separate",replayWhen:"always",autoUpdate:true,games:[{exe:"Cyberpunk2077.exe",name:"Cyberpunk 2077",isGame:true},{exe:"cs2.exe",name:"Counter-Strike 2",isGame:true},{exe:"Photos.exe",name:"Photos",isGame:false}],monitorId:"\\\\.\\DISPLAY1",windowExe:"",showCursor:true,resolution:"native",customWidth:1920,customHeight:1080,aspect:"source",aspectFit:"fit",fps:60,codec:"h264",rateControl:"vbr",bitrateMbps:50,cq:23,preset:5,container:"mp4",systemAudio:true,systemDeviceId:"",mic:true,micDeviceId:"",audioTracks:"both",audioKbps:192,replayEnabled:true,replaySeconds:120,outputDir:"C:\\Users\\Tyler\\Videos\\ReKapture",folderPerGame:true,hotkeySave:{mods:5,key:121},hotkeyRecord:{mods:5,key:120},hotkeyToggle:{mods:5,key:88},overlayToasts:true,overlayRec:true,overlayCorner:"tr",startWithWindows:false,startMinimized:false,accent:"#76B900",discordMB:20,shareGameName:true,webhooks:[],clipboardMB:20,shareMode:"copy"},o);
+  const mk=(o)=>Object.assign({padEnabled:true,padHold:false,padXbox:{save:["View","Menu"],record:[],toggle:[],shot:[]},padPS:{save:["Create","Options"],record:["L1","Touchpad"],toggle:[],shot:["Touchpad","Options"]},screenshotFormat:"png",screenshotDir:"C:\\Users\\Tyler\\Pictures\\Screenshots",shotIconColor:"#0A72F0",shotIconOpacity:90,hotkeyShot:{mods:5,key:112},overlayStyle:"icons",overlaySeconds:3,overlaySize:"medium",replayIconColor:"#76B900",replayIconOpacity:90,recDotColor:"#E5484D",recDotOpacity:90,captureMode:"auto",autoTarget:"window",discordAudio:"separate",replayWhen:"always",autoUpdate:true,games:[{exe:"Cyberpunk2077.exe",name:"Cyberpunk 2077",isGame:true},{exe:"cs2.exe",name:"Counter-Strike 2",isGame:true},{exe:"Photos.exe",name:"Photos",isGame:false}],monitorId:"\\\\.\\DISPLAY1",windowExe:"",showCursor:true,resolution:"native",customWidth:1920,customHeight:1080,aspect:"source",aspectFit:"fit",fps:60,codec:"h264",rateControl:"vbr",bitrateMbps:50,cq:23,preset:5,container:"mp4",systemAudio:true,systemDeviceId:"",mic:true,micDeviceId:"",audioTracks:"both",audioKbps:192,replayEnabled:true,replaySeconds:120,outputDir:"C:\\Users\\Tyler\\Videos\\ReKapture",folderPerGame:true,hotkeySave:{mods:5,key:121},hotkeyRecord:{mods:5,key:120},hotkeyToggle:{mods:5,key:88},overlayToasts:true,overlayRec:true,overlayCorner:"tr",startWithWindows:false,startMinimized:false,accent:"#76B900",discordMB:20,shareGameName:true,webhooks:[],clipboardMB:20,shareMode:"copy"},o);
   const mock={settings:mk({}),gpu:"NVIDIA GeForce RTX 5080",version:"1.0.0",pads:["Xbox controller","DualSense (Bluetooth)"],nvenc:{checked:true,h264:true,hevc:true,av1:true},
     monitors:[{id:"\\\\.\\DISPLAY1",name:"Display 1 — 2560×1440 @ 240 Hz (main)",width:2560,height:1440},{id:"\\\\.\\DISPLAY2",name:"Display 2 — 1920×1080 @ 60 Hz",width:1920,height:1080}],
     windows:[{exe:"cs2.exe",title:"Counter-Strike 2"},{exe:"FortniteClient-Win64-Shipping.exe",title:"Fortnite"}],
@@ -847,14 +857,19 @@ function renderGames(){
     : '<p class="hint">No games yet. Start one and it appears here.</p>';
 }
 const ICON_COLORS={replayIconColor:[["#76B900","Green"],["#E5484D","Red"],["#0A72F0","Blue"],["#F2A93B","Orange"],["#F2F4F5","White"]],
+  shotIconColor:[["#0A72F0","Blue"],["#F2F4F5","White"],["#76B900","Green"],["#E5484D","Red"],["#F2A93B","Orange"]],
   recDotColor:[["#E5484D","Red"],["#F2A93B","Orange"],["#76B900","Green"],["#0A72F0","Blue"],["#F2F4F5","White"]]};
 function iconSVG(kind,hex,op){
   const m=(c,t,to)=>{ const n=parseInt(c.slice(1),16),r=n>>16,g=n>>8&255,b=n&255,f=x=>Math.round(x+(to-x)*t); return `rgb(${f(r)},${f(g)},${f(b)})`; };
   const o=(op||100)/100;
-  if(kind==="shot") return `<svg viewBox="0 0 100 100" style="opacity:${o}"><circle cx="50" cy="54" r="45" fill="#000" opacity=".35"/><circle cx="50" cy="50" r="45" fill="${hex}"/>
-    <g transform="translate(0,3)" fill="${m(hex,.35,0)}"><rect x="25.5" y="35.5" width="49" height="33" rx="5"/><rect x="38.5" y="27" width="23" height="13" rx="3"/></g>
-    <g fill="${m(hex,.72,255)}"><rect x="25.5" y="35.5" width="49" height="33" rx="5"/><rect x="38.5" y="27" width="23" height="13" rx="3"/></g>
-    <circle cx="50" cy="52.5" r="12" fill="${m(hex,.35,0)}"/><circle cx="50" cy="52.5" r="8" fill="${m(hex,.72,255)}"/><circle cx="67" cy="42" r="2.4" fill="${m(hex,.35,0)}"/></svg>`;
+  if(kind==="shot"){ // same drawing as the in-game icon (indicator.go)
+    const n=parseInt(hex.slice(1),16), light=0.299*(n>>16)+0.587*(n>>8&255)+0.114*(n&255)>170;
+    const body=light? m(hex,.72,20) : m(hex,.78,255), det=light? m(hex,.25,255) : m(hex,.45,0);
+    const cam=f=>`<g fill="${f}"><rect x="19.85" y="36.5" width="60.3" height="38.7" rx="7.2"/><path d="M37.4 26.6h19.8l5.4 11.7H32z"/><rect x="62.1" y="31.1" width="10.8" height="7.2" rx="1.8"/></g>`;
+    return `<svg viewBox="0 0 100 100" style="opacity:${o}"><circle cx="50" cy="54" r="45" fill="#000" opacity=".35"/><circle cx="50" cy="50" r="45" fill="${hex}"/>
+    <g transform="translate(0,3.6)">${cam(m(hex,.4,0))}</g>${cam(body)}
+    <circle cx="50.9" cy="57" r="15.5" fill="${det}"/><circle cx="50.9" cy="57" r="11.2" fill="${body}"/><circle cx="50.9" cy="57" r="7.35" fill="${det}"/><circle cx="48.2" cy="54.3" r="2.1" fill="${body}"/>
+    <rect x="25.3" y="42.7" width="9.6" height="5.4" rx="1.35" fill="${det}"/></svg>`; }
   if(kind==="replay") return `<svg viewBox="0 0 100 100" style="opacity:${o}"><circle cx="50" cy="54" r="45" fill="#000" opacity=".35"/><circle cx="50" cy="50" r="45" fill="${hex}"/>
     <g fill="${m(hex,.35,0)}" transform="translate(2.2,4)"><path d="M19.4 50 46.4 26.6v46.8z"/><path d="M46.4 50 73.4 26.6v46.8z"/></g>
     <g fill="${m(hex,.68,255)}"><path d="M19.4 50 46.4 26.6v46.8z"/><path d="M46.4 50 73.4 26.6v46.8z"/></g></svg>`;
@@ -866,7 +881,9 @@ function renderOverlayOpts(){
     box.innerHTML=list.map(([h,n])=>`<button class="swatch" style="background:${h}" data-hex="${h}" aria-label="${n}" aria-pressed="${h===cur}"></button>`).join("")
       +`<label class="swatch pick" aria-pressed="${!known}" title="Custom color"><input type="color" value="${cur.toLowerCase()}" aria-label="Custom color"></label>`;
   });
-  $("#prevReplay").innerHTML=iconSVG("replay",S.replayIconColor,S.replayIconOpacity)+iconSVG("shot",S.replayIconColor,S.replayIconOpacity);
+  $("#prevReplay").innerHTML=iconSVG("replay",S.replayIconColor,S.replayIconOpacity);
+  $("#prevShot").innerHTML=iconSVG("shot",S.shotIconColor,S.shotIconOpacity);
+  $("#v-sopac").textContent=S.shotIconOpacity+"%";
   $("#prevRec").innerHTML=iconSVG("rec",S.recDotColor,S.recDotOpacity);
   $("#v-ropac").textContent=S.replayIconOpacity+"%"; $("#v-dopac").textContent=S.recDotOpacity+"%";
   const secs=S.overlaySeconds, preset=[1,3,5].includes(secs);
@@ -928,6 +945,7 @@ function render(){
   const per = S.rateControl==="cq"? S.bitrateMbps*1.0 : S.bitrateMbps;
   $("#replayDisk").innerHTML=`Uses about <b>${size(per*(S.replaySeconds+8)/8)}</b> of disk space in the clips folder while on${S.rateControl==="cq"?" (estimate)":""}.`;
   $("#outPath").textContent=S.outputDir; $("#outPath").title=S.outputDir;
+  $("#shotPath").textContent=S.screenshotDir; $("#shotPath").title=S.screenshotDir;
   $$("[data-hk]").forEach(b=>{ if(hkListen!==b) b.textContent=hkText(S[b.dataset.hk]); });
   kbd($("#kSave"),S.hotkeySave); kbd($("#kRec"),S.hotkeyRecord);
   renderAccent();
@@ -1013,8 +1031,10 @@ $("#replaySwitch").onclick=()=>{ const on=!ST.replayOn; ST.replayOn=on; S.replay
 $("#saveBtn").onclick=()=>glSaveReplay();
 $("#recBtn").onclick=()=>glToggleRecord();
 $("#openOut").onclick=()=>glOpenPath(S.outputDir,"folder");
-$("#browse").onclick=()=>glPickFolder();
-window.__glPicked=p=>{ if(p) setK("outputDir",p); };
+$("#browse").onclick=()=>glPickFolder("");
+$("#browseShots").onclick=()=>glPickFolder("shots");
+$("#openShots").onclick=()=>glOpenPath(S.screenshotDir,"folder");
+window.__glPicked=(p,shots)=>{ if(p) setK(shots? "screenshotDir" : "outputDir",p); };
 $("#openLog").onclick=()=>glOpenLog();
 $("#errLog").onclick=()=>glOpenLog();
 $("#quit").onclick=()=>glQuit();

@@ -61,6 +61,7 @@ type Settings struct {
 
 	// Screenshots: "png" (lossless, full quality) | "jpg" (smaller files)
 	ScreenshotFormat string `json:"screenshotFormat"`
+	ScreenshotDir    string `json:"screenshotDir"` // default Pictures\Screenshots
 
 	// Controller shortcuts: action ("save" | "record" | "toggle" | "shot") -> buttons.
 	PadEnabled    bool                `json:"padEnabled"`
@@ -79,6 +80,8 @@ type Settings struct {
 	ReplayIconOpacity int     `json:"replayIconOpacity"` // percent
 	RecDotColor       string  `json:"recDotColor"`
 	RecDotOpacity     int     `json:"recDotOpacity"`
+	ShotIconColor     string  `json:"shotIconColor"`
+	ShotIconOpacity   int     `json:"shotIconOpacity"`
 	StartWithWindows  bool    `json:"startWithWindows"`
 	StartMinimized    bool    `json:"startMinimized"`
 
@@ -166,6 +169,9 @@ func DefaultSettings(videosDir string) Settings {
 		ReplayIconOpacity: 90,
 		RecDotColor:       "#E5484D",
 		RecDotOpacity:     90,
+		ShotIconColor:     "#0A72F0",
+		ShotIconOpacity:   90,
+		ScreenshotDir:     filepath.Join(PicturesDir(videosDir), "Screenshots"),
 		Accent:            DefaultAccent,
 		AutoUpdate:        true,
 		DiscordMB:         20,
@@ -223,6 +229,9 @@ func (s *Settings) Normalize(def Settings) {
 	if strings.TrimSpace(s.OutputDir) == "" {
 		s.OutputDir = def.OutputDir
 	}
+	if strings.TrimSpace(s.ScreenshotDir) == "" {
+		s.ScreenshotDir = def.ScreenshotDir
+	}
 	if s.ClipboardMB != 20 && s.ClipboardMB != 50 && s.ClipboardMB != 500 {
 		s.ClipboardMB = 20
 	}
@@ -267,6 +276,13 @@ func (s *Settings) Normalize(def Settings) {
 	if s.RecDotOpacity == 0 {
 		s.RecDotOpacity = def.RecDotOpacity
 	}
+	if !hexColor.MatchString(s.ShotIconColor) {
+		s.ShotIconColor = def.ShotIconColor
+	}
+	if s.ShotIconOpacity == 0 {
+		s.ShotIconOpacity = def.ShotIconOpacity
+	}
+	s.ShotIconOpacity = clamp(s.ShotIconOpacity, 10, 100)
 	s.ReplayIconOpacity = clamp(s.ReplayIconOpacity, 10, 100)
 	s.RecDotOpacity = clamp(s.RecDotOpacity, 10, 100)
 	if s.HotkeySave.Key == 0 {
@@ -435,4 +451,10 @@ func vkName(vk uint32) string {
 		return n
 	}
 	return fmt.Sprintf("Key%d", vk)
+}
+
+// PicturesDir finds the Pictures folder. Windows asks the shell (it can be
+// moved, e.g. into OneDrive); elsewhere it's next to the Videos folder.
+var PicturesDir = func(videosDir string) string {
+	return filepath.Join(filepath.Dir(videosDir), "Pictures")
 }

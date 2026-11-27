@@ -56,7 +56,7 @@ func TestRenderIndicator(t *testing.T) {
 	for _, c := range []struct {
 		icon, hex string
 		op        int
-	}{{IconReplay, "#0A72F0", 100}, {IconReplay, "#76B900", 60}, {IconRecStart, "#E5484D", 100}, {IconRecStop, "#E5484D", 100}, {IconShot, "#76B900", 100}, {IconShot, "#0A72F0", 60}} {
+	}{{IconReplay, "#0A72F0", 100}, {IconReplay, "#76B900", 60}, {IconRecStart, "#E5484D", 100}, {IconRecStop, "#E5484D", 100}, {IconShot, "#0A72F0", 100}, {IconShot, "#F2F4F5", 100}, {IconShot, "#E5484D", 60}} {
 		img := RenderIndicator(c.icon, 80, c.hex, c.op)
 		if a := img.RGBAAt(0, 0).A; a != 0 {
 			t.Errorf("%s: corner should be transparent, alpha %d", c.icon, a)

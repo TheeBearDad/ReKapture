@@ -6,4 +6,3 @@ dist/
 *.part
 # keep the Windows resource file (icon and version info)
 !rsrc_windows_amd64.syso
-/greenlight

@@ -22,7 +22,7 @@ INSTALL
 There are two ways to use ReKapture. Pick one.
 
 Installer (recommended)
-1. Run ReKapture-Setup-2.8.0.exe.
+1. Run ReKapture-Setup-2.8.1.exe.
 2. Windows may show "Windows protected your PC" because ReKapture isn't
    code-signed. Click "More info", then "Run anyway".
 3. Follow the steps. ReKapture installs to C:\Program Files (x86)\ReKapture
@@ -86,8 +86,8 @@ The defaults use Shift so they don't clash with the NVIDIA App's own Alt+F10
 and Alt+F9 (or Alt+F1 for its screenshots). Change any of them under
 "Shortcuts & overlay".
 
-Clips and screenshots are saved to Videos\ReKapture, in a folder named
-after the game.
+Clips are saved to Videos\ReKapture and screenshots to Pictures\Screenshots,
+each in a folder named after the game.
 
 Closing the window keeps ReKapture running in the system tray (the green
 icon by the clock). Right-click the icon for quick actions or to quit.
@@ -181,8 +181,9 @@ Screenshots
   is on, exactly as Windows shows it: DLSS and other in-game effects, plus
   overlays from other apps (Steam, Discord, NVIDIA, filters). ReKapture's
   own icons and notices are never in it, and neither is the mouse pointer.
-- Works whether or not Instant Replay is on. Pick PNG (lossless) or JPG
-  (smaller) under "Replay & saving". Screenshots show up in Recent clips
+- Works whether or not Instant Replay is on. Under "Replay & saving" you
+  can change the screenshots folder (Pictures\Screenshots by default) and
+  pick PNG (lossless) or JPG (smaller). Screenshots show up in Recent clips
   and can be shared to Discord like clips; one too big for your upload
   limit is sent as a high-quality JPG.
 - With HDR turned on in Windows, screenshots are saved in standard (SDR)
@@ -205,8 +206,9 @@ Controller shortcuts
 
 Overlay
 - Small icons over your game, in the corner of your choice: a rewind icon
-  when a replay is saved, a camera for a screenshot, a dot when recording
-  starts and a stop icon when it ends. Pick their color, opacity and size, and how long they stay up
+  when a replay is saved, a camera when a screenshot is taken, a dot when
+  recording starts and a stop icon when it ends. Each has its own color and
+  opacity. Pick their color, opacity and size, and how long they stay up
   (1, 3 or 5 seconds, or any time from 0.5 to 30). "Show on screen" tries
   them out. Prefer words? Switch the style to Text notices.
 - Problems (a save that failed, for example) always show a short text

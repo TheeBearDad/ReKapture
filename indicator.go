@@ -122,27 +122,47 @@ func RenderIndicator(icon string, px int, hex string, opacity int) *image.RGBA {
 		}
 	case IconShot:
 		layers = append(layers, layer{circle(c, c, rad), col, 1})
-		light := mix(col, 0.72, 255)
-		dark := mix(col, 0.35, 0)
-		box := func(x0, y0, x1, y1, r float64) func(x, y float64) bool {
+		// Camera in a pale tint of the color, details in a dark shade. On a
+		// light disc (white, yellow) that flips so the camera stays visible.
+		body, detail := mix(col, 0.78, 255), mix(col, 0.45, 0)
+		if 0.299*col[0]+0.587*col[1]+0.114*col[2] > 170 {
+			body, detail = mix(col, 0.72, 20), mix(col, 0.25, 255)
+		}
+		shadowC := mix(col, 0.4, 0)
+		rrect := func(x0, y0, x1, y1, r float64) func(x, y float64) bool {
 			return func(x, y float64) bool { // rounded rectangle
 				dx := math.Max(math.Max(x0+r-x, x-(x1-r)), 0)
 				dy := math.Max(math.Max(y0+r-y, y-(y1-r)), 0)
 				return x >= x0 && x <= x1 && y >= y0 && y <= y1 && dx*dx+dy*dy <= r*r
 			}
 		}
-		// Camera body with a raised viewfinder bump, and a lens ring.
-		bw, bh := rad*1.12, rad*0.74
-		bx0, by0 := c-bw/2, c-bh/2+rad*0.08
-		body := box(bx0, by0, bx0+bw, by0+bh, rad*0.12)
-		bump := box(c-rad*0.26, by0-rad*0.2, c+rad*0.26, by0+rad*0.1, rad*0.06)
-		lc := c + rad*0.08 + bh*0.02
+		// Body, with a viewfinder hump on top (a trapezoid) and a shutter button.
+		bw, bh := rad*1.34, rad*0.86
+		bx0, by0 := c-bw/2, c-bh/2+rad*0.13
+		bodyF := rrect(bx0, by0, bx0+bw, by0+bh, rad*0.16)
+		hy0, hy1 := by0-rad*0.22, by0+rad*0.04
+		humpF := func(x, y float64) bool {
+			if y < hy0 || y > hy1 {
+				return false
+			}
+			t := (y - hy0) / (hy1 - hy0) // wider at the bottom
+			half := rad * (0.22 + 0.12*t)
+			cx := c - rad*0.06
+			return x >= cx-half && x <= cx+half
+		}
+		shutter := rrect(bx0+bw*0.70, by0-rad*0.12, bx0+bw*0.88, by0+rad*0.04, rad*0.04)
+		cam := func(dx, dy float64) func(x, y float64) bool {
+			return func(x, y float64) bool { x, y = x-dx, y-dy; return bodyF(x, y) || humpF(x, y) || shutter(x, y) }
+		}
+		lx, ly := c+rad*0.02, by0+bh*0.53
 		layers = append(layers,
-			layer{func(x, y float64) bool { return body(x, y+rad*0.07) || bump(x, y+rad*0.07) }, dark, 1},
-			layer{func(x, y float64) bool { return body(x, y) || bump(x, y) }, light, 1},
-			layer{circle(c, lc, bh*0.36), dark, 1},
-			layer{circle(c, lc, bh*0.24), light, 1},
-			layer{circle(bx0+bw*0.84, by0+bh*0.2, rad*0.055), dark, 1},
+			layer{cam(0, rad*0.08), shadowC, 1}, // drop shadow under the camera
+			layer{cam(0, 0), body, 1},
+			layer{circle(lx, ly, bh*0.40), detail, 1}, // lens ring
+			layer{circle(lx, ly, bh*0.29), body, 1},
+			layer{circle(lx, ly, bh*0.19), detail, 1},                                             // glass
+			layer{circle(lx-bh*0.07, ly-bh*0.07, bh*0.055), body, 1},                              // glint
+			layer{rrect(bx0+bw*0.09, by0+bh*0.16, bx0+bw*0.25, by0+bh*0.30, rad*0.03), detail, 1}, // flash
 		)
 	case IconRecStart:
 		layers = append(layers, layer{circle(c, c, rad), [3]float64{255, 255, 255}, 0.92}) // thin white rim

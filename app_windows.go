@@ -28,7 +28,7 @@ import (
 //go:embed ui/index.html
 var indexHTML string
 
-const appVersion = "2.8.0"
+const appVersion = "2.8.1"
 
 const (
 	wmClose     = 0x0010
@@ -70,6 +70,7 @@ type App struct {
 	visible        bool
 	media          *MediaServer
 	outDir         atomic.Value // string; read by the media server goroutines
+	shotDir        atomic.Value // string; the screenshots folder, same use
 	editor         *Editor
 	sharer         *Sharer
 	discordMB      atomic.Int32
@@ -168,6 +169,7 @@ func main() {
 	app = a
 	setDarkTitleBar(a.hwnd, s.Accent)
 	a.outDir.Store(s.OutputDir)
+	a.shotDir.Store(s.ScreenshotDir)
 	wv.SetSize(820, 560, webview2.HintMin)
 	a.subclassMain()
 	a.initHost()
@@ -178,7 +180,11 @@ func main() {
 	plat := &winPlatform{notify: a.notify}
 	a.plat = plat
 	if m, err := NewMediaServer(ffmpeg, filepath.Join(localDataDir(), "previews"), plat.Command,
-		func() []string { d, _ := a.outDir.Load().(string); return []string{d} },
+		func() []string {
+			d, _ := a.outDir.Load().(string)
+			sd, _ := a.shotDir.Load().(string)
+			return []string{d, sd}
+		},
 		func() bool { a.nvMu.Lock(); defer a.nvMu.Unlock(); return len(a.nvenc) == 0 || a.nvenc["h264"] }); err == nil {
 		a.media = m
 	} else {
@@ -526,7 +532,10 @@ func (a *App) onPadAction(action string) {
 func (a *App) showIcon(icon string) {
 	s := a.settings
 	hex, op := s.ReplayIconColor, s.ReplayIconOpacity
-	if icon != IconReplay && icon != IconShot {
+	switch icon {
+	case IconShot:
+		hex, op = s.ShotIconColor, s.ShotIconOpacity
+	case IconRecStart, IconRecStop:
 		hex, op = s.RecDotColor, s.RecDotOpacity
 	}
 	ov.ShowIcon(icon, s.OverlaySize, hex, op, IndicatorMillis(s, "ok"))
@@ -702,9 +711,16 @@ func (a *App) bind() {
 				s.OutputDir = old.OutputDir
 			}
 		}
+		if s.ScreenshotDir != old.ScreenshotDir {
+			if err := os.MkdirAll(s.ScreenshotDir, 0o755); err != nil {
+				errMsg = "Can't save screenshots there: " + err.Error()
+				s.ScreenshotDir = old.ScreenshotDir
+			}
+		}
 		a.settings = s
 		a.pads.Apply(s)
 		a.outDir.Store(s.OutputDir)
+		a.shotDir.Store(s.ScreenshotDir)
 		a.discordMB.Store(int32(s.DiscordMB))
 		ov.corner = s.OverlayCorner
 		if s.Accent != old.Accent {
@@ -714,7 +730,7 @@ func (a *App) bind() {
 		if err := SaveSettings(a.setPath, s); err != nil {
 			errMsg = "Couldn't save settings: " + err.Error()
 		}
-		if old.HotkeySave != s.HotkeySave || old.HotkeyRecord != s.HotkeyRecord || old.HotkeyToggle != s.HotkeyToggle {
+		if old.HotkeySave != s.HotkeySave || old.HotkeyRecord != s.HotkeyRecord || old.HotkeyToggle != s.HotkeyToggle || old.HotkeyShot != s.HotkeyShot {
 			a.registerHotkeys()
 		}
 		go a.engine.Apply(s)
@@ -727,12 +743,18 @@ func (a *App) bind() {
 	})
 	w.Bind("glSaveReplay", func() { go a.engine.SaveReplay() })
 	w.Bind("glToggleRecord", func() { go a.engine.ToggleRecording() })
-	w.Bind("glPickFolder", func() {
+	w.Bind("glPickFolder", func(target string) {
 		// Run the modal dialog from the message loop, not inside the WebView2
 		// callback (nested loops inside WebView2 events can deadlock).
+		// target: "" = clips folder, "shots" = screenshots folder.
 		a.wv.Dispatch(func() {
-			if p, ok := pickFolder(a.hwnd, a.settings.OutputDir); ok {
-				a.evalJSON("__glPicked", p)
+			start := a.settings.OutputDir
+			if target == "shots" {
+				start = a.settings.ScreenshotDir
+				os.MkdirAll(start, 0o755) // so the dialog opens inside it
+			}
+			if p, ok := pickFolder(a.hwnd, start); ok {
+				a.evalJSON2("__glPicked", p, target == "shots")
 			}
 		})
 	})
